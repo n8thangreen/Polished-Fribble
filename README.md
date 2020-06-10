@@ -1,2 +1,3 @@
 # Polished-Fribble
-Login system for stats department
+
+Login system for stats department room booking.
