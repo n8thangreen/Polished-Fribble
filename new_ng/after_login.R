@@ -16,32 +16,8 @@ library(RSQLite)
 library(RJSONIO)
 library(RSQLite)
 library(DBI)
+library(lubridate) 
 
-
-##TODO: don't have this file in repo
-
-# individual <- read.csv("Individual_Information.csv",  
-individual <- read.csv("Room_Information.csv",
-                       stringsAsFactors = FALSE)
-individual_rs <- read.csv("individual room status.csv",
-                          stringsAsFactors = FALSE)
-
-room_status <- read.csv("Room status.csv",
-                        stringsAsFactors = FALSE)
-
-##TODO: individual_rs doesnt have ID column
-# timetable_data <-
-#     data.frame(
-#         ID = individual_rs$ID,
-#         Date = individual_rs$Date,
-#         Available_period = individual_rs$Available_period)
-
-##TODO: is this correct since it does have the columns needed?...
-timetable_data <-
-    data.frame(
-        ID = room_status$ID,
-        Date = room_status$Date,
-        Available_period = room_status$Available_period)
 
 body <- dashboardBody(
     tabItems(
@@ -187,16 +163,24 @@ server <- shinyServer(
         })
         
         ## Save Updated Room information
-        observeEvent(input$save1, {   
-            current <- weekdays(as.POSIXct(Sys.Date()), abbreviate = FALSE)
-            a <- data.frame(number = 1:5,
-                            day = c("Monday","Tuesday","Wednesday","Thursday","Friday"))
+        observeEvent(input$save1, {
             
-            if (     current == "Monday"){   date_update <- Sys.Date() + (a$number[a$day == input$day1] - 1) + 7}
-            else if (current == "Tuesday"){  date_update <- Sys.Date() + (a$number[a$day == input$day1] - 2) + 7}
-            else if (current == "Wednesday"){date_update <- Sys.Date() + (a$number[a$day == input$day1] - 3) + 7}
-            else if (current == "Thursday"){ date_update <- Sys.Date() + (a$number[a$day == input$day1] - 4) + 7}
-            else if (current == "Friday"){   date_update <- Sys.Date() + (a$number[a$day == input$day1] - 5) + 7}
+            current_day <- weekdays(as.POSIXct(Sys.Date()), abbreviate = FALSE)
+            
+            dayoftheweek <- setNames(1:5, c("Monday","Tuesday","Wednesday","Thursday","Friday"))
+            new_day_num <- unname(dayoftheweek[input$day1])
+            today_num <- unname(dayoftheweek[current_day])
+            
+            # changed this so its within 7 days
+            # rather than always next week
+            date_update <- 
+                switch(new_day_num,
+                       "Monday"    = today() + ifelse(today_num > 1, 8 - today_num,  1 - today_num),
+                       "Tuesday"   = today() + ifelse(today_num > 2, 9 - today_num,  2 - today_num),
+                       "Wednesday" = today() + ifelse(today_num > 3, 10 - today_num, 3 - today_num),
+                       "Thursday"  = today() + ifelse(today_num > 4, 11 - today_num, 4 - today_num),
+                       "Friday"    = today() + 5 - today_num)
+        
             
             available_time1 <- ""
             for(j in 1:length(input$time1)){
@@ -258,7 +242,7 @@ shinyApp(ui = ui,
          server = server)
 
 
-# 1. updates on current week data
+# 1. updates on current_day week data
 # 2. historical data records
 # 3. overview of other people's data
 # 4. Realize the above by db

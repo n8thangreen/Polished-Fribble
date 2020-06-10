@@ -41,6 +41,7 @@ create <- function(id,
   on.exit(dbDisconnect(db))
   
   table <- dbReadTable(db, 'room_table')
+  
   com <- paste0("(",
                 id , ", '",
                 date, "','",
@@ -74,7 +75,7 @@ delete <- function(id,
   on.exit(dbDisconnect(db))
   
   query <- paste0('DELETE FROM ',room_table,
-                  ' WHERE ID = ', id," AND ",
+                  ' WHERE ID = ', id, " AND ",
                   "Date = '", date,"'")
   print(query) #for debug
   dbSendQuery(db, query)
@@ -102,7 +103,7 @@ create_next_month <- function(id,
         day_of_the_week = weekday_to_cha(Sys.Date() + i),
         available_period = NA,
         notes = NA,
-        room_table = 'room_table')
+        room_table = 'room_data')
     }
   }
 }

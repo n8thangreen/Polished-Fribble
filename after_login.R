@@ -18,6 +18,7 @@ library(DBI)
 # individual <- read.csv("Individual_Information.csv",  
 individual <- read.csv("Room_Information.csv",
                        stringsAsFactors = FALSE)
+
 individual_rs <- read.csv("individual room status.csv",
                           stringsAsFactors = FALSE)
 
