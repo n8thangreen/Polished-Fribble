@@ -28,6 +28,9 @@ There are 2 main types of user and related functions:
 - Can change booking room, date and time
 - Can delete booking
 
+The database can be described with the following diagram.
+
+![](RDB_diagram.png)
 
 ### Case Study
 
