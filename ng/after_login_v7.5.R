@@ -20,6 +20,28 @@ library(shinyhelper)
 
 
 
+# database source ----
+
+# options(edwinyu = list(
+#   "host" = "db4free.net",
+#   "port" = 3306,
+#   "user" = "edwinyu",
+#   "password" = "Edwinyrl2019"
+# ))
+# drv <<- MySQL()
+
+options(edwinyu = list(
+  "host" = NULL,
+  "port" = 0,
+  "user" = NULL,
+  "password" = NULL
+))
+
+drv <<- RSQLite::SQLite()
+database <- "room_avail.db"
+
+
+
 
 body <- dashboardBody(
   shinyjs::useShinyjs(),
@@ -69,26 +91,13 @@ server <- shinyServer(function(input,output,session){
   #It's safer and maybe run faster if changing for a better server
   #Note that the host,username and password below is for the server
   #NOT FOR THE INDIVIDUAL USERS OF THE LOGIN SYSTEM
-  
-  options(edwinyu = list(
-    "host" = "db4free.net",
-    "port" = 3306,
-    "user" = "edwinyu",
-    "password" = "Edwinyrl2019"
-  ))
-  
-  options(edwinyu = list(
-    "host" = NULL,
-    "port" = 0,
-    "user" = NULL,
-    "password" = NULL
-  ))
+
   
   observe_helpers(help_dir = "helpfiles", withMathJax = FALSE)
   
   #load the table from the given database   
-  loadData <- function(database,table) {
-    db <- dbConnect(MySQL(),
+  loadData <- function(database, table) {
+    db <- dbConnect(drv,
                     dbname = database,
                     host = options()$edwinyu$host, 
                     port = options()$edwinyu$port,
@@ -117,7 +126,7 @@ server <- shinyServer(function(input,output,session){
                      date_2=NULL,
                      database,
                      table) {
-    db <- dbConnect(MySQL(),
+    db <- dbConnect(drv,
                     dbname = database,
                     host = options()$edwinyu$host, 
                     port = options()$edwinyu$port,
@@ -146,7 +155,7 @@ server <- shinyServer(function(input,output,session){
                              booking_no,
                              database,
                              table){
-    db <- dbConnect(MySQL(),
+    db <- dbConnect(drv,
                     dbname = database,
                     host = options()$edwinyu$host, 
                     port = options()$edwinyu$port,
@@ -164,7 +173,7 @@ server <- shinyServer(function(input,output,session){
   delete_booking <- function(booking_no,
                              database,
                              table) {
-    db <- dbConnect(MySQL(),
+    db <- dbConnect(drv,
                     dbname = database,
                     host = options()$edwinyu$host, 
                     port = options()$edwinyu$port,
