@@ -30,70 +30,58 @@ update_status <- function(room_no,             # single integer?
                                             paste0(rep("'Unavailable'",5), collapse = ","))
     
     A[A$am == "pm", "avail"]      <- paste0(paste0(rep("'Unavailable'",3), collapse = ","),
-                                      ",",
-                                      paste0(rep("'Available'",5), collapse = ","))
+                                            ",",
+                                            paste0(rep("'Available'",5), collapse = ","))
     
     A[A$am == "both", "avail"]    <- paste0(paste0(rep("'Available'",3), collapse = ","),
-                                      ",",
-                                      paste0(rep("'Available'",5), collapse = ","))
+                                            ",",
+                                            paste0(rep("'Available'",5), collapse = ","))
     
     A[A$am == "neither", "avail"] <- paste0(paste0(rep("'Unavailable'",3), collapse = ","),
-                                      ",",
-                                      paste0(rep("'Unavailable'",5), collapse = ","))
+                                            ",",
+                                            paste0(rep("'Unavailable'",5), collapse = ","))
     
     A['weekday'] <- date_to_weekday(A$date)
     
+    
+    # check correct column order
+    query_cols <- c("date", "weekday", "room_no", "avail")
+    
     # split
-    AM   <- A[A$am == "am", ]
-    PM   <- A[A$am == "pm", ]
-    Both <- A[A$am == "both", ]
-    Neither <- A[A$am == "neither", ]
+    AM   <- A[A$am == "am", query_cols]
+    PM   <- A[A$am == "pm", query_cols]
+    Both <- A[A$am == "both", query_cols]
+    Neither <- A[A$am == "neither", query_cols]
     
     ##TODO: these seems to so the same thing.
     ## why not just do directly on A?
     
-    if ("am" %in% am){
-      query_am <- paste0(paste0("('", paste(AM$date,
-                                            AM$weekday,
-                                            AM$room_no,
-                                            AM$avail,
-                                            sep = "','"),
-                                "')"), collapse = ",") 
-    } else {
-      query_am <- NULL}
+    parse_query <- function(...) {
+      paste0(paste0("('",
+                    paste(..., sep = "','"),
+                    "')"),
+             collapse = ",") 
+    }
     
-    if ("pm" %in% am) {
-      query_pm <- paste0(paste0("('",
-                                paste(PM$date,
-                                      PM$weekday,
-                                      PM$room_no,
-                                      PM$avail,
-                                      sep = "','"),
-                                "')"), collapse = ",")
-    } else {
-        query_pm <- NULL}
+    query_am <- 
+      if ("am" %in% am){
+        parse_query(AM)
+      } else {NULL}
     
-    if ("both" %in% am) {
-      query_both <- paste0(paste0("('",
-                                  paste(Both$date,
-                                        Both$weekday,
-                                        Both$room_no,
-                                        Both$avail,
-                                        sep = "','"),
-                                  "')"), collapse = ",")
-    } else {
-        query_both <- NULL}
+    query_pm <- 
+      if ("pm" %in% am) {
+        parse_query(PM)
+      } else {NULL}
     
-    if ("neither" %in% am) {
-      query_neither <- paste0(paste0("('",
-                                     paste(Neither$date,
-                                           Neither$weekday,
-                                           Neither$room_no,
-                                           Neither$avail,
-                                           sep = "','"),
-                                     "')"), collapse = ",")
-    } else {
-        query_neither <- NULL}
+    query_both <- 
+      if ("both" %in% am) {
+        parse_query(Both)
+      } else {NULL}
+    
+    query_neither <- 
+      if ("neither" %in% am) {
+        parse_query(Neither)
+      } else {NULL}
     
     l <- c(query_am, query_pm, query_both, query_neither)
     
@@ -102,32 +90,29 @@ update_status <- function(room_no,             # single integer?
   } else if (use == "booking") {
     
     availability <- paste(paste0("'", avail[, 1]), avail[, 2], avail[, 3], avail[, 4],
-                          avail[, 5], avail[, 6], avail[, 7], paste0(avail[, 8], "'"), sep = "','")
+                          avail[, 5], avail[, 6],  avail[, 7], paste0(avail[, 8], "'"), sep = "','")
     
-    A <- data_frame(room_no = room_no,
-                    date = date,
+    A <- data_frame(date = date,
+                    room_no = room_no,
                     avail = availability)
     
     A['weekday'] <- date_to_weekday(A$date)
     
-    q <- paste0(paste0("('",
-                       paste(A$date,
-                             A$weekday,
-                             A$room_no,
-                             A$avail,
-                             sep = "','"),
-                       "')"), collapse = ",")
-    }
+    A <- A[, query_cols]
+    
+    q <- parse_query(A)
+    
+  }
   
   ##TODO: dont need to update duplicate key? ie date, time, room_no
   #
   query <- paste0("INSERT INTO ", table,
                   " VALUES ", q,
                   " ON DUPLICATE KEY UPDATE Date=VALUES(Date),",
-                    "Weekday=VALUES(Weekday), Room_no=VALUES(Room_no),",
-                    "9am_10am=VALUES(9am_10am), 10am_11am=VALUES(10am_11am), 11am_12pm=VALUES(11am_12pm),",
-                    "12pm_1pm=VALUES(12pm_1pm), 1pm_2pm=VALUES(1pm_2pm),     2pm_3pm=VALUES(2pm_3pm),",
-                    "3pm_4pm=VALUES(3pm_4pm),   4pm_5pm=VALUES(4pm_5pm)")
+                  "Weekday=VALUES(Weekday), Room_no=VALUES(Room_no),",
+                  "9am_10am=VALUES(9am_10am), 10am_11am=VALUES(10am_11am), 11am_12pm=VALUES(11am_12pm),",
+                  "12pm_1pm=VALUES(12pm_1pm), 1pm_2pm=VALUES(1pm_2pm),     2pm_3pm=VALUES(2pm_3pm),",
+                  "3pm_4pm=VALUES(3pm_4pm),   4pm_5pm=VALUES(4pm_5pm)")
   
   print(query) #for debug
   db <- dbConnect(MySQL(),
