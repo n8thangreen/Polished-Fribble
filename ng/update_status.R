@@ -115,14 +115,15 @@ update_status <- function(room_no,             # single integer?
                   "3pm_4pm=VALUES(3pm_4pm),   4pm_5pm=VALUES(4pm_5pm)")
   
   print(query) #for debug
-  db <- dbConnect(MySQL(),
+  db <- dbConnect(drv, #MySQL(),
                   dbname = database,
                   host = options()$edwinyu$host, 
                   port = options()$edwinyu$port,
                   user = options()$edwinyu$user, 
                   password = options()$edwinyu$password)
+  on.exit(dbDisconnect(db))
+  
   dbGetQuery(db, query)
-  dbDisconnect(db) 
 }
 
 
