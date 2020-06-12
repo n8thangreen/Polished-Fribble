@@ -104,16 +104,16 @@ update_status <- function(room_no,             # single integer?
     
   }
   
-  ##TODO: dont need to update duplicate key? ie date, time, room_no
-  #
-  query <- paste0("INSERT INTO ", table,
-                  " VALUES ", q,
-                  " ON DUPLICATE KEY UPDATE Date=VALUES(Date),",
-                  "Weekday=VALUES(Weekday), Room_no=VALUES(Room_no),",
-                  "9am_10am=VALUES(9am_10am), 10am_11am=VALUES(10am_11am), 11am_12pm=VALUES(11am_12pm),",
-                  "12pm_1pm=VALUES(12pm_1pm), 1pm_2pm=VALUES(1pm_2pm),     2pm_3pm=VALUES(2pm_3pm),",
-                  "3pm_4pm=VALUES(3pm_4pm),   4pm_5pm=VALUES(4pm_5pm)")
+  table_headings <- c("Weekday", "Room_no",
+                      "9am_10am", "10am_11am", "11am_12pm", "12pm_1pm", "1pm_2pm", "2pm_3pm", "3pm_4pm", "4pm_5pm")
   
+  query <- paste(
+    sprintf(
+      "INSERT INTO %s VALUES ('%s')", table, q),
+    "ON DUPLICATE KEY UPDATE",
+    paste(sprintf("%1$s = VALUES(%1$s)", table_headings), collapse = ", ")
+  )
+
   print(query) #for debug
   db <- dbConnect(drv, #MySQL(),
                   dbname = database,
