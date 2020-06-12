@@ -30,8 +30,8 @@ delete <- function(room_no,
   on.exit(dbDisconnect(db), add = TRUE)
   
   query <- paste0('DELETE FROM ', table,
-                  " WHERE Room_no = '", room_no
-                  ,"' AND ",
+                  " WHERE Room_no = '", room_no,
+                  "' AND ",
                   "Date >= '", date_1,"' AND <='", date_2,"'")
   
   print(query) #for debug
