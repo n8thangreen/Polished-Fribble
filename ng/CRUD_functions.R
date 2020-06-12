@@ -7,41 +7,40 @@ loadData <- function(database, table) {
                   port = options()$edwinyu$port,
                   user = options()$edwinyu$user, 
                   password = options()$edwinyu$password)
+  on.exit(dbDisconnect(db), add = TRUE)
+  
   query <- sprintf("SELECT * FROM %s", table)
-  data <- dbGetQuery(db, query)
-  dbDisconnect(db)
-  data
+  dbGetQuery(db, query)
 }
 
 
 #For deleting rows in table "new_room_status" from db "room_avail"    
 delete <- function(room_no,
                    date_1,
-                   date_2=NULL,
+                   date_2 = date_1,
                    database,
                    table) {
+  
   db <- dbConnect(drv,
                   dbname = database,
                   host = options()$edwinyu$host, 
                   port = options()$edwinyu$port,
                   user = options()$edwinyu$user, 
                   password = options()$edwinyu$password)
-  if (is.null(date_2)){
-    query <- paste0('DELETE FROM ',table," WHERE Room_no = '", room_no,"' AND ",
-                    "Date = '", date_1,"'")
-  }else{
-    query <- paste0('DELETE FROM ',table," WHERE Room_no = '", room_no,"' AND ",
-                    "Date BETWEEN '", date_1,"' AND '",date_2,"'")
-  }
+  on.exit(dbDisconnect(db), add = TRUE)
   
-  print(query)#for debug
+  query <- paste0('DELETE FROM ', table,
+                  " WHERE Room_no = '", room_no
+                  ,"' AND ",
+                  "Date >= '", date_1,"' AND <='", date_2,"'")
+  
+  print(query) #for debug
   dbSendQuery(db, query)
-  dbDisconnect(db)
 }
 
 
-#functions for updating booking(for table room_booked)
-#room_booked is a table I created in MySQL with PRIMARY booking_no   
+# updating booking(for table room_booked)
+# room_booked is a table I created in MySQL with PRIMARY booking_no   
 update_booking <- function(room_no,
                            booker,
                            date,
@@ -55,15 +54,26 @@ update_booking <- function(room_no,
                   port = options()$edwinyu$port,
                   user = options()$edwinyu$user, 
                   password = options()$edwinyu$password)
-  query <- paste0("INSERT INTO ",table,
-                  " VALUES ('",booking_no,"','",date,"','",time,"','",room_no,"','",booker,"')
-                    ON DUPLICATE KEY UPDATE room_no=VALUES(room_no),booker=VALUES(booker),date=VALUES(date),time=VALUES(time)")
+  on.exit(dbDisconnect(db), add = TRUE)
+  
+  value_names <- c("booking_no", "date", "time", "room_no", "booker")
+  values <- c(booking_no, date, time, room_no, booker)
+  
+  query <- paste(
+    sprintf(
+    "INSERT INTO %s VALUES ('%s')",
+    table, 
+    paste(values, collapse = "', '")),
+    "ON DUPLICATE KEY UPDATE",
+    paste(sprintf("%1$s = VALUES(%1$s)", value_names), collapse = ", ")
+  )
+  
   print(query)
   dbGetQuery(db, query)
-  dbDisconnect(db)
 }
 
-#function for deleting booking from room_booked  
+
+# deleting booking from room_booked  
 delete_booking <- function(booking_no,
                            database,
                            table) {
@@ -73,10 +83,10 @@ delete_booking <- function(booking_no,
                   port = options()$edwinyu$port,
                   user = options()$edwinyu$user, 
                   password = options()$edwinyu$password)
+  on.exit(dbDisconnect(db), add = TRUE)
   
-  query <- paste0('DELETE FROM ',table," WHERE booking_no = '",booking_no,"'")
+  query <- sprintf("DELETE FROM %s WHERE booking_no = '%s'", table, booking_no)
   
-  print(query)#for debug
+  print(query) #for debug
   dbSendQuery(db, query)
-  dbDisconnect(db)
 }

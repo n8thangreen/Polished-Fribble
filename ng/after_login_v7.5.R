@@ -1,4 +1,3 @@
-# devtools::install_github("paulc91/shinyauthr")
 
 library(shiny)
 library(shinyauthr)
@@ -18,6 +17,9 @@ library(RMySQL)
 library(DT)
 library(shinyhelper)
 
+
+source("update_status.R")
+source("CRUD_functions.R")
 
 
 # database source ----
@@ -62,7 +64,7 @@ body <- dashboardBody(
 )# End of body
 
 #Side bar
-sidebar<-dashboardSidebar(
+sidebar <- dashboardSidebar(
   collapsed = TRUE,
   sidebarMenuOutput('menu')
 )
@@ -72,39 +74,27 @@ ui <- dashboardPage(
   dashboardHeader(
     title = "Welcome to Polished Fribble!",
     titleWidth = 450,
-    tags$li(class = "dropdown", style = "padding: 8px;",
+    tags$li(class = "dropdown",
+            style = "padding: 8px;",
             shinyauthr::logoutUI("logout")),
-    tags$li(class = "dropdown", tags$a(icon("github"), 
-                                       href = "https://github.com/paulc91/shinyauthr",
-                                       title = "See the code on github"))),
+    tags$li(class = "dropdown",
+            tags$a(icon("github"), 
+                   href = "https://github.com/paulc91/shinyauthr",
+                   title = "See the code on github"))),
   sidebar = sidebar,
   body = body,
   skin = "purple"
 )
 
 
-# Define server logic required to draw a histogram
-server <- shinyServer(function(input,output,session){
+server <- shinyServer(function(input, output, session) {
   
   #Currently read from the database I created remotely(based on a free server)
   #It's safer and maybe run faster if changing for a better server
   #Note that the host,username and password below is for the server
   #NOT FOR THE INDIVIDUAL USERS OF THE LOGIN SYSTEM
-
   
   observe_helpers(help_dir = "helpfiles", withMathJax = FALSE)
-  
-  # For updating rows in table "new_room_status" from db "room_avail"
-  ## when use="write", the function inputs am="am"/"pm"/"both"/"neither", used for writing personal room status to the table
-  # when use="booking", the function inputs avail
-  # avail is an n by 8 matrix, each row corresponds to 8 periods for certain room on a specific day
-  
-  # new_room_status is a table I created in MySQL with Room_no and Date as PRIMARY,
-  # so that when updating rows with the same Room_no and Date existing in the table
-  # it modifies the exisitng row rather than adding a new row   
-  source("update_status.R")
-  source("CRUD_functions.R")
-  
   
   individual <- loadData('room_avail','individual_information')
   individual_rb <- loadData('room_avail','new_room_status')
@@ -140,7 +130,6 @@ server <- shinyServer(function(input,output,session){
   
   user_info <- reactive({credentials()$info})
   
-  
   ####################################################################################
   # pulls out the user information returned from login module
   user_data <- reactive({credentials()$info})
@@ -158,328 +147,328 @@ server <- shinyServer(function(input,output,session){
       d <- d + 1
     }
     while( !(date_to_weekday(d) %in% c("Sun","Sat")) ){
-      a[a$day == date_to_weekday(d), ]$date = as.character(d)
+      a[a$day == date_to_weekday(d), ]$date <- as.character(d)
       d <- d + 1
     }
     
   }else{
-    
     d <- Sys.Date() + 7
     while( !(date_to_weekday(d) %in% c("Sun","Sat")) ){
       d <- d - 1
     }
     d <- d + 1
     while( !(date_to_weekday(d) %in% c("Sun","Sat")) ){
-      a[a$day == date_to_weekday(d), ]$date = as.character(d)
+      a[a$day == date_to_weekday(d), ]$date <- as.character(d)
       d <- d + 1
     }
   }   
   #diagram displaying current status of personal room information of the user  
   output$personal <- DT::renderDataTable({
     req(credentials()$user_auth)
-    updated_room <- loadData('room_avail','new_room_status')
+    updated_room <- loadData('room_avail', 'new_room_status')
     updated_room[updated_room$Room_no == individual$RoomNumber[individual$UserName == user_data()$ID] & as.Date(updated_room$Date)>=Sys.Date(), ]
   },
   options = list(scrollX = TRUE)
   )
   #diagram displaying all exisiting booking of user
   output$cancel <- DT::renderDataTable({
-    room_booked <- loadData("room_avail","room_booked")
+    room_booked <- loadData("room_avail", "room_booked")
     room_booked$day <- date_to_weekday(room_booked$date)
     room_booked[room_booked$booker == user_data()$ID & as.Date(room_booked$date) >= Sys.Date(), ]
   })
   
   ## 1. Save Updated Room information   
   
-  observeEvent(input$save1, 
-               {   
-                 date_update <- input$date1
-                 
-                 available_time1 <- ""
-                 for(j in 1:length(input$time1)){
-                   available_time1 <- paste(available_time1,input$time1[j], sep = "")
-                 }
-                 
-                 if(available_time1=="am"){
-                   am = "am"
-                 }else if(available_time1=="pm"){
-                   am = "pm"
-                 }else if(available_time1=="ampm"){
-                   am = "both"
-                 }else{
-                   am = "neither"}
-                 
-                 rt <- loadData('room_avail', 'new_room_status')
-                 r_no <- individual$RoomNumber[user_data()$ID == individual$UserName]
-                 
-                 #If a room has been booked by some else(after user first updating their information)
-                 #The user cannot change the room status again, and a notification is shown for asking him to contact admin
-                 
-                 #first examine if the row that user wants to update has existed in the table
-                 #if it exists, it first checks if any time slot has been booked and then decide whether to update
-                 #if it doesn't exist, the row is updated directly without checking
-                 
-                 if(nrow(rt[rt$Room_no == r_no & rt$Date==date_update, ]) == 0){
-                   
-                   update_status(use = "write",
-                                 room_no = r_no,
-                                 date = date_update,
-                                 am = am,
-                                 database = 'room_avail',
-                                 table = 'new_room_status')
-                 }else{
-                   if(any(as.matrix(rt[rt$Room_no == r_no & rt$Date == date_update, ] == "Booked"))){
-                     
-                     showNotification("Someone has booked your room already. Please contact admin.",
-                                      type = "error",
-                                      duration = 30,
-                                      closeButton = TRUE)
-                     
-                   }else{
-                     update_status(use = "write",
-                                   room_no = r_no,
-                                   date = date_update,
-                                   am = am,
-                                   database = 'room_avail',
-                                   table = 'new_room_status') 
-                   }
-                 }
-                 
-                 output$personal <- DT::renderDataTable(
-                   {
-                     req(credentials()$user_auth)
-                     updated_room = loadData('room_avail','new_room_status')
-                     updated_room = updated_room[updated_room$Room_no == individual$RoomNumber[individual$UserName == user_data()$ID] &
-                                                   as.Date(updated_room$Date) >= Sys.Date(), ]
-                     updated_room},
-                   options = list(scrollX = TRUE)
-                 )
-               })    
+  observeEvent(input$save1, {   
+    date_update <- input$date1
+    
+    available_time1 <- ""
+    for(j in 1:length(input$time1)){
+      available_time1 <- paste(available_time1, input$time1[j], sep = "")
+    }
+    
+    ##TODO: vector lookup?
+    
+    am <- 
+      if(available_time1 == "am"){
+        "am"
+      }else if(available_time1 == "pm"){
+        "pm"
+      }else if(available_time1 == "ampm"){
+        "both"
+      }else{
+        "neither"}
+    
+    rt <- loadData('room_avail', 'new_room_status')
+    r_no <- individual$RoomNumber[user_data()$ID == individual$UserName]
+    
+    #If a room has been booked by some else(after user first updating their information)
+    #The user cannot change the room status again, and a notification is shown for asking him to contact admin
+    
+    #first examine if the row that user wants to update has existed in the table
+    #if it exists, it first checks if any time slot has been booked and then decide whether to update
+    #if it doesn't exist, the row is updated directly without checking
+    
+    if(nrow(rt[rt$Room_no == r_no & rt$Date==date_update, ]) == 0){
+      
+      update_status(use = "write",
+                    room_no = r_no,
+                    date = date_update,
+                    am = am,
+                    database = 'room_avail',
+                    table = 'new_room_status')
+    }else{
+      if(any(as.matrix(rt[rt$Room_no == r_no & rt$Date == date_update, ] == "Booked"))){
+        
+        showNotification("Someone has booked your room already. Please contact admin.",
+                         type = "error",
+                         duration = 30,
+                         closeButton = TRUE)
+      }else{
+        update_status(use = "write",
+                      room_no = r_no,
+                      date = date_update,
+                      am = am,
+                      database = 'room_avail',
+                      table = 'new_room_status')}
+    }
+    
+    output$personal <- DT::renderDataTable(
+      {
+        req(credentials()$user_auth)
+        updated_room = loadData('room_avail','new_room_status')
+        updated_room = updated_room[updated_room$Room_no == individual$RoomNumber[individual$UserName == user_data()$ID] &
+                                      as.Date(updated_room$Date) >= Sys.Date(), ]
+        updated_room},
+      options = list(scrollX = TRUE)
+    )
+  })    
   
   ## 2. search for available room information
   
-  observeEvent(input$search,
-               {
-                 req(input$date2)
-                 room_table <- loadData('room_avail','new_room_status')
-                 abbr <- function(x){substr(x, 1, 3)}
-                 avail_am <- c()
-                 avail_pm <- c()
-                 avail_both <- c()
-                 
-                 for(i in 1:nrow(room_table)){
-                   avail_am[i] <- any(room_table[i, 2:4] == "Available")
-                   avail_pm[i] <- any(room_table[i, 5:9] == "Available")
-                   avail_both[i] <- any(room_table[i, 2:9] == "Available")
-                 }#shiny-tab-Room_booking
-                 
-                 search_time <- paste(input$time2, collapse = "")
-                 
-                 avail <- 
-                   if (search_time == "ampm") {
-                     avail_both
-                   } else if (search_time == "am") {
-                     avail_am
-                   } else if (search_time == "pm") {
-                     avail_pm
-                   } else {
-                     rep(TRUE, nrow(room_table))}
-                 
-                 selected_rt <- room_table[avail & room_table$Date %in% as.character(input$date2), ]
-                 table_shown <- selected_rt[selected_rt$Room_no != individual$RoomNumber[individual$UserName == user_data()$ID], ]
-                 
-                 output$all <- DT::renderDataTable({
-                   req(credentials()$user_auth)
-                   table_shown},
-                   selection = list(mode = "multiple",
-                                    target = "cell"),
-                   options = list(scrollX = TRUE))
-                 
-                 output$cand_bookings <- renderPrint({
-                   req(input$all_cells_selected)
-                   if(nrow(input$all_cells_selected) == 0){
-                     cat('Please select the rooms')
-                   }else{ 
-                     row_id <- input$all_cells_selected[, 1]
-                     col_id <- input$all_cells_selected[, 2]
-                     booking_candidate <- data.frame(date = table_shown[row_id, 1],
-                                                     day = table_shown[row_id, 2],
-                                                     room_no = table_shown[row_id, 3],
-                                                     time = colnames(table_shown)[col_id])
-                     booking_candidate
-                   }
-                 })
-               })
+  observeEvent(input$search, {
+    req(input$date2)
+    room_table <- loadData('room_avail','new_room_status')
+    abbr <- function(x){substr(x, 1, 3)}
+    avail_am <- c()
+    avail_pm <- c()
+    avail_both <- c()
+    
+    for(i in 1:nrow(room_table)){
+      avail_am[i] <- any(room_table[i, 2:4] == "Available")
+      avail_pm[i] <- any(room_table[i, 5:9] == "Available")
+      avail_both[i] <- any(room_table[i, 2:9] == "Available")
+    }#shiny-tab-Room_booking
+    
+    search_time <- paste(input$time2, collapse = "")
+    
+    avail <- 
+      if (search_time == "ampm") {
+        avail_both
+      } else if (search_time == "am") {
+        avail_am
+      } else if (search_time == "pm") {
+        avail_pm
+      } else {
+        rep(TRUE, nrow(room_table))}
+    
+    selected_rt <- room_table[avail & room_table$Date %in% as.character(input$date2), ]
+    table_shown <- selected_rt[selected_rt$Room_no != individual$RoomNumber[individual$UserName == user_data()$ID], ]
+    
+    output$all <- DT::renderDataTable({
+      req(credentials()$user_auth)
+      table_shown},
+      selection = list(mode = "multiple",
+                       target = "cell"),
+      options = list(scrollX = TRUE))
+    
+    output$cand_bookings <- renderPrint({
+      req(input$all_cells_selected)
+      if(nrow(input$all_cells_selected) == 0){
+        cat('Please select the rooms')
+      }else{ 
+        row_id <- input$all_cells_selected[, 1]
+        col_id <- input$all_cells_selected[, 2]
+        booking_candidate <- data.frame(date = table_shown[row_id, 1],
+                                        day = table_shown[row_id, 2],
+                                        room_no = table_shown[row_id, 3],
+                                        time = colnames(table_shown)[col_id])
+        booking_candidate
+      }
+    })
+  })
   
   ## 3. book the room
-  observeEvent(input$book,{rt=loadData('room_avail', 'new_room_status')
-  
-  room_table <- loadData('room_avail', 'new_room_status')
-  
-  abbr <- function(x) {substr(x, 1, 3)}
-  avail_am <- c()
-  avail_pm <- c()
-  avail_both <- c()
-  
-  for (i in 1:nrow(room_table)){
-    avail_am[i] <- any(room_table[i, 2:4] == "Available")
-    avail_pm[i] <- any(room_table[i, 5:9] == "Available")
-    avail_both[i] <- any(room_table[i, 2:9] == "Available")
-  }#shiny-tab-Room_booking
-  
-  search_time <- paste(input$time2,collapse = "")
-  
-  avail <- 
-    if(search_time == "ampm"){
-      avail_both
-    }else if(search_time == "am"){
-      avail_am
-    }else if(search_time == "pm"){
-      avail_pm
+  observeEvent(input$book, {
+    rt <- loadData('room_avail', 'new_room_status')
+    room_table <- loadData('room_avail', 'new_room_status')
+    
+    abbr <- function(x) {substr(x, 1, 3)}
+    avail_am <- c()
+    avail_pm <- c()
+    avail_both <- c()
+    
+    for (i in 1:nrow(room_table)){
+      avail_am[i] <- any(room_table[i, 2:4] == "Available")
+      avail_pm[i] <- any(room_table[i, 5:9] == "Available")
+      avail_both[i] <- any(room_table[i, 2:9] == "Available")
+    }
+    
+    search_time <- paste(input$time2,collapse = "")
+    
+    avail <- 
+      if(search_time == "ampm"){
+        avail_both
+      }else if(search_time == "am"){
+        avail_am
+      }else if(search_time == "pm"){
+        avail_pm
+      }else{
+        rep(TRUE, nrow(room_table))}
+    
+    selected_rt <- room_table[avail & room_table$Date %in% as.character(input$date2), ]
+    table_shown <- selected_rt[selected_rt$Room_no != individual$RoomNumber[individual$UserName == user_data()$ID], ]
+    
+    index <- input$all_cells_selected
+    row_id <- input$all_cells_selected[, 1]
+    col_id <- input$all_cells_selected[, 2]
+    booking_candidate <-
+      data.frame(
+        date = table_shown[row_id, 1],
+        day = table_shown[row_id, 2],
+        room_no = table_shown[row_id, 3],
+        time = colnames(table_shown)[col_id])
+    
+    unique_row_no <- as.vector(unique(input$all_cells_selected[, 1]))
+    booking_candidate2 <- matrix(data = list(),
+                                 ncol = 4,
+                                 nrow = length(unique_row_no))
+    
+    for(j in 1:length(unique_row_no)){
+      booking_candidate2[[j, 1]] <- table_shown[unique_row_no[j], 1]  
+      booking_candidate2[[j, 2]] <- table_shown[unique_row_no[j], 2] 
+      booking_candidate2[[j, 3]] <- table_shown[unique_row_no[j], 3] 
+      booking_candidate2[[j, 4]] <- as.vector(index[index[,1] == unique_row_no[j], 2])
+    }
+    
+    intervals <- as.matrix(booking_candidate2[, 4])
+    
+    interval_avail <- NULL
+    for(i in 1:length(unique_row_no)){ 
+      interval_avail <- rbind(interval_avail,
+                              apply( as.matrix(rt[,matrix(booking_candidate2[, 4][[i]])] == "Available"), 1, all))
+    }
+    
+    #The mechanism of booking supports only booking one room at a time
+    #User chooses day and (multiple) time slots to make the booking
+    #If no single room satisfying all requirements, a notification is shown to let users select fewer time slots at a time
+    candidate <- NULL
+    for(i in 1:length(unique_row_no)){ 
+      candidate <- rbind(candidate,
+                         rt[ interval_avail[i,] &
+                               rt$Date == as.character(booking_candidate2[i, 1]) &
+                               rt$Room_no != individual$RoomNumber[individual$UserName == user_data()$ID] &
+                               rt$Room_no == booking_candidate2[i, 3], ])
+    }
+    
+    if(nrow(candidate) == 0){
+      if(length(intervals) > 1){
+        showNotification("No room is available for all time slots of your choice. Try selecting fewer time slots at a time.",
+                         type = "warning",
+                         closeButton = TRUE,
+                         duration = 30)
+        
+      }else if(length(intervals) == 1){
+        
+        showNotification("No room is available for this time slot so far.",
+                         type = "warning",
+                         closeButton = TRUE,
+                         duration = 30)
+      }
+      
     }else{
-      rep(TRUE, nrow(room_table))}
-  
-  selected_rt <- room_table[avail & room_table$Date %in% as.character(input$date2), ]
-  table_shown <- selected_rt[selected_rt$Room_no != individual$RoomNumber[individual$UserName == user_data()$ID], ]
-  
-  index <- input$all_cells_selected
-  row_id <- input$all_cells_selected[, 1]
-  col_id <- input$all_cells_selected[, 2]
-  booking_candidate <-
-    data.frame(
-      date = table_shown[row_id, 1],
-      day = table_shown[row_id, 2],
-      room_no = table_shown[row_id, 3],
-      time = colnames(table_shown)[col_id])
-  
-  unique_row_no <- as.vector(unique(input$all_cells_selected[, 1]))
-  booking_candidate2 <- matrix(data = list(),
-                               ncol = 4,
-                               nrow = length(unique_row_no))
-  
-  for(j in 1:length(unique_row_no)){
-    booking_candidate2[[j, 1]] <- table_shown[unique_row_no[j], 1]  
-    booking_candidate2[[j, 2]] <- table_shown[unique_row_no[j], 2] 
-    booking_candidate2[[j, 3]] <- table_shown[unique_row_no[j], 3] 
-    booking_candidate2[[j, 4]] <- as.vector(index[index[,1] == unique_row_no[j], 2])
-  }
-  
-  intervals <- as.matrix(booking_candidate2[, 4])
-  
-  interval_avail <- NULL
-  for(i in 1:length(unique_row_no)){ 
-    interval_avail <- rbind(interval_avail,
-                            apply( as.matrix(rt[,matrix(booking_candidate2[, 4][[i]])] == "Available"), 1, all))
-  }
-  
-  #The mechanism of booking supports only booking one room at a time
-  #User chooses day and (multiple) time slots to make the booking
-  #If no single room satisfying all requirements, a notification is shown to let users select fewer time slots at a time
-  candidate <- NULL
-  for(i in 1:length(unique_row_no)){ 
-    candidate <- rbind(candidate,
-                       rt[ interval_avail[i,] & rt$Date==as.character(booking_candidate2[i, 1]) &
-                             rt$Room_no != individual$RoomNumber[individual$UserName == user_data()$ID] &
-                             rt$Room_no == booking_candidate2[i, 3], ])
-  }
-  
-  if(nrow(candidate) == 0){
-    if(length(intervals) > 1){
-      showNotification("No room is available for all time slots of your choice. Try selecting fewer time slots at a time.",
-                       type = "warning",
-                       closeButton = TRUE,
-                       duration = 30)
+      room_no <- candidate$Room_no
+      room_status <- candidate[1:nrow(intervals), 4:11]
       
-    }else if(length(intervals) == 1){
+      for(i in 1:nrow(intervals)){
+        room_status[i, ][intervals[[i]] - 3] <- "Booked"
+      }
       
-      showNotification("No room is available for this time slot so far.",
-                       type = "warning",
-                       closeButton = TRUE,
-                       duration = 30)
+      update_status(use = "booking",
+                    room_no = room_no,
+                    date = as.character(booking_candidate2[, 1]), 
+                    avail = room_status,
+                    database = 'room_avail',
+                    table = 'new_room_status')
+      room_confirm <- ''
+      for(i in 1:length(unique_row_no)){
+        room_confirm <- paste(room_confirm,
+                              'room',room_no[i],"\n","(",booking_candidate2[i, 1],",",
+                              date_to_weekday(as.character(booking_candidate2[i, 1])),",",
+                              paste(colnames(rt)[intervals[[i]]],
+                                    collapse = ' and '),")", sep = " ")
+      }
+      
+      room_confirm <- paste("You have successfully booked", room_confirm)
+      showNotification(room_confirm,
+                       type = "message",
+                       duration = 30,
+                       closeButton = TRUE)
+      
+      #update the booking information displayed
+      output$cancel <- DT::renderDataTable({
+        req(credentials()$user_auth)
+        room_booked <- loadData("room_avail", "room_booked")
+        room_booked$day <- date_to_weekday(room_booked$date)
+        room_booked[room_booked$booker == user_data()$ID & as.Date(room_booked$date) >= Sys.Date(), ]
+      })
     }
-    
-  }else{
-    room_no <- candidate$Room_no
-    room_status <- candidate[1:nrow(intervals), 4:11]
-    
-    for(i in 1:nrow(intervals)){
-      room_status[i, ][intervals[[i]]-3] <- "Booked"
-    }
-    
-    update_status(use = "booking",
-                  room_no = room_no,
-                  date = as.character(booking_candidate2[, 1]), 
-                  avail = room_status,
-                  database = 'room_avail',
-                  table = 'new_room_status')
-    room_confirm <- ''
-    for(i in 1:length(unique_row_no)){
-      room_confirm <- paste(room_confirm,
-                            'room',room_no[i],"\n","(",booking_candidate2[i, 1],",",date_to_weekday(as.character(booking_candidate2[i,1])),",",
-                            paste(colnames(rt)[intervals[[i]]],
-                                  collapse = ' and '),")", sep = " ")
-    }
-    
-    room_confirm <- paste("You have successfully booked",room_confirm)
-    showNotification(room_confirm,
-                     type = "message",
-                     duration = 30,
-                     closeButton = TRUE)
-    
-    #update the booking information displayed
-    output$cancel <- DT::renderDataTable({
-      req(credentials()$user_auth)
-      room_booked <- loadData("room_avail", "room_booked")
-      room_booked$day <- date_to_weekday(room_booked$date)
-      room_booked[room_booked$booker == user_data()$ID & as.Date(room_booked$date) >= Sys.Date(), ]
-    })
-  }
   })
   
   ## 4.cancel the room booking
-  observeEvent(input$cancel,
-               {
-                 room_booked <- loadData("room_avail","room_booked")
-                 rt <- loadData('room_avail','new_room_status')
-                 
-                 date_update = input$date1
-                 
-                 if(input$booking_no %in% room_booked$booking_no){
-                   delete_Info <- room_booked[room_booked$booking_no == input$booking_no, ]
-                   
-                   delete_booking(input$booking_no, "room_avail", "room_booked")
-                   avail <- rt[rt$Date == delete_Info$date, ]
-                   avail <- avail[avail$Room_no == delete_Info$room_no, ]
-                   avail[1, delete_Info$time] <- "Available"
-                   update_status(use = "booking",
-                                 room_no = individual$RoomNumber[individual$UserName==user_data()$ID],
-                                 date = date_update,
-                                 avail = avail,database = "room_avail",
-                                 table = "new_room_status" )
-                   
-                   output$cancel <- DT::renderDataTable({
-                     req(credentials()$user_auth)
-                     room_booked=loadData("room_avail","room_booked")
-                     room_booked$day <- date_to_weekday(room_booked$date)
-                     room_booked[room_booked$booker == user_data()$ID, ]
-                     
-                   })
-                   
-                   current <- weekdays(as.POSIXct(Sys.Date()), abbreviate = FALSE)
-                   cancel_confirm <- paste("You have successfully canceled the booked room",
-                                           input$room_book_no2,"\n","(",current,",",input$day4,",",paste(input$time4, collapse = ' and '),")",sep = "")
-                   showNotification(cancel_confirm,
-                                    type = "message",
-                                    duration = 30,
-                                    closeButton = TRUE)
-                 }else{
-                   booking_no_error <- paste("Your booking reference number does not exist, recheck it please!")
-                   showNotification(booking_no_error,type = "message",
-                                    duration = 30,
-                                    closeButton = TRUE)
-                 }
-                 
-               })
+  observeEvent(input$cancel, {
+    room_booked <- loadData("room_avail", "room_booked")
+    rt <- loadData('room_avail', 'new_room_status')
+    date_update <- input$date1
+    
+    if(input$booking_no %in% room_booked$booking_no){
+      delete_Info <- room_booked[room_booked$booking_no == input$booking_no, ]
+      
+      delete_booking(input$booking_no, "room_avail", "room_booked")
+      avail <- rt[rt$Date == delete_Info$date, ]
+      avail <- avail[avail$Room_no == delete_Info$room_no, ]
+      avail[1, delete_Info$time] <- "Available"
+      update_status(use = "booking",
+                    room_no = individual$RoomNumber[individual$UserName == user_data()$ID],
+                    date = date_update,
+                    avail = avail,
+                    database = "room_avail",
+                    table = "new_room_status" )
+      
+      output$cancel <- DT::renderDataTable({
+        req(credentials()$user_auth)
+        room_booked <- loadData("room_avail", "room_booked")
+        room_booked$day <- date_to_weekday(room_booked$date)
+        room_booked[room_booked$booker == user_data()$ID, ]
+        
+      })
+      
+      current <- weekdays(as.POSIXct(Sys.Date()), abbreviate = FALSE)
+      cancel_confirm <- paste("You have successfully canceled the booked room",
+                              input$room_book_no2,"\n","(",current,",",input$day4,",",
+                              paste(input$time4,
+                                    collapse = ' and '),")", sep = "")
+      showNotification(cancel_confirm,
+                       type = "message",
+                       duration = 30,
+                       closeButton = TRUE)
+    }else{
+      booking_no_error <- paste("Your booking reference number does not exist, recheck it please!")
+      showNotification(booking_no_error,type = "message",
+                       duration = 30,
+                       closeButton = TRUE)
+    }
+  })
   output$UI1 <- renderUI({
     req(credentials()$user_auth)
     fluidPage(box(width=3,
@@ -499,30 +488,32 @@ server <- shinyServer(function(input,output,session){
                                "- You may always modify your available time slots, so long as it isn't booked by someone else",
                                "- If you input nothing in this table, your room would not appear in any search result (unavailable by default)"))),
                   
-                  checkboxGroupInput("time1","Time",choices = c("am","pm"),selected = ""),
-                  actionButton("save1","Save",width = "25%")),
-    box(width = 9,
-        dataTableOutput(outputId = 'personal')) %>%
-      helper(
-        colour = "mediumpurple1",
-        type = "inline",
-        size = "m",
-        content = c("Explaination about cells: ","  ",
-                    "Available  : Your room can be booked for this time slot",
-                    "Unavailable: Your room cannot be booked for this time slot",
-                    "Booked     : Others have booked your room for this time slot, you can no longer make changes on this day",
-                    " ",
-                    "To check for the availability of others' rooms and make bookings, please go to Room Booking:) ")
-      ),
-    tags$head(
-      tags$style(
-        HTML(".shiny-notification {position:fixed;top: calc(50%);left: calc(50%);}")
-      )
-    ))
+                  checkboxGroupInput("time1","Time",
+                                     choices = c("am","pm"),
+                                     selected = ""),
+                  actionButton("save1", "Save", width = "25%")),
+              box(width = 9,
+                  dataTableOutput(outputId = 'personal')) %>%
+                helper(
+                  colour = "mediumpurple1",
+                  type = "inline",
+                  size = "m",
+                  content = c("Explaination about cells: ","  ",
+                              "Available  : Your room can be booked for this time slot",
+                              "Unavailable: Your room cannot be booked for this time slot",
+                              "Booked     : Others have booked your room for this time slot, you can no longer make changes on this day",
+                              " ",
+                              "To check for the availability of others' rooms and make bookings, please go to Room Booking:) ")
+                ),
+              tags$head(
+                tags$style(
+                  HTML(".shiny-notification {position:fixed;top: calc(50%);left: calc(50%);}")
+                )
+              ))
   })
   
   output$UI2 <- renderUI({
-    individual <- loadData('room_avail','individual_information')
+    individual <- loadData('room_avail', 'individual_information')
     req(credentials()$user_auth)
     fluidRow(box(width=3,
                  h4("Find out which room can be booked : "),
@@ -537,13 +528,14 @@ server <- shinyServer(function(input,output,session){
                             content = c("- You can search for others' room availability here, and make your booking in the next section.",
                                         "- Please select the date and the approximate time you wish to use other's office, and then press 'Search'.",
                                         "- If any room satisfys your requirements, it will be shown on the right.")
-                   )),
+                     )),
                  checkboxGroupInput("time2","Time",
                                     choices = c("am","pm"),
                                     selected = ""),
-                 actionButton("search","Search",width = "25%"),
+                 actionButton("search", "Search", width = "25%"),
                  h4("Confirm rooms of your choice:"),
-                 verbatimTextOutput('cand_bookings'),verbatimTextOutput('test'),
+                 verbatimTextOutput('cand_bookings'),
+                 verbatimTextOutput('test'),
                  actionButton("book","Book", width = "25%") %>%
                    helper(
                      colour = "mediumpurple1",
@@ -571,7 +563,7 @@ server <- shinyServer(function(input,output,session){
     req(credentials()$user_auth)
     fluidPage(box(width = 3,
                   h4("Cancel the booked room"),
-                  textInput("booking_no","Input booking number here:",value = "") %>%
+                  textInput("booking_no","Input booking number here:", value = "") %>%
                     helper(
                       colour = "mediumpurple1",
                       type = "inline",
