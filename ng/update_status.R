@@ -16,92 +16,42 @@ update_status <- function(room_no,             # single integer?
                           database,
                           table) {
   
-  date_to_weekday <- function(date) {format(as.Date(date), format = "%a")}
-  
   if(use == "write"){
     
-    A <- data_frame(room_no = room_no,
-                    date = date,
-                    am = am,
-                    avail = NA_character_)
+    A <- tibble(date = date,
+                weekday = date_to_weekday(date),
+                room_no = room_no,
+                am = am,
+                avail = case_when(
+                  am == "am" ~ list(c(rep("Available",3), rep("Unavailable",5))),
+                  am == "pm" ~ list(c(rep("Unavailable",3), rep("Available",5))),
+                  am == "both" ~ list(c(rep("Available",3), rep("Available",5))),
+                  am == "neither" ~ list(c(rep("Unavailable",3), rep("Unavailable",5)))),
+                ) %>% 
+      select(-am)
     
-    A[A$am == "am", "avail"]      <- paste0(paste0(rep("'Available'",3),  collapse = ","),
-                                            ",",
-                                            paste0(rep("'Unavailable'",5), collapse = ","))
-    
-    A[A$am == "pm", "avail"]      <- paste0(paste0(rep("'Unavailable'",3), collapse = ","),
-                                            ",",
-                                            paste0(rep("'Available'",5), collapse = ","))
-    
-    A[A$am == "both", "avail"]    <- paste0(paste0(rep("'Available'",3), collapse = ","),
-                                            ",",
-                                            paste0(rep("'Available'",5), collapse = ","))
-    
-    A[A$am == "neither", "avail"] <- paste0(paste0(rep("'Unavailable'",3), collapse = ","),
-                                            ",",
-                                            paste0(rep("'Unavailable'",5), collapse = ","))
-    
-    A['weekday'] <- date_to_weekday(A$date)
-    
-    
-    # check correct column order
-    query_cols <- c("date", "weekday", "room_no", "avail")
-    
-    # split
-    AM   <- A[A$am == "am", query_cols]
-    PM   <- A[A$am == "pm", query_cols]
-    Both <- A[A$am == "both", query_cols]
-    Neither <- A[A$am == "neither", query_cols]
-    
-    ##TODO: these seems to so the same thing.
-    ## why not just do directly on A?
-    
-    parse_query <- function(...) {
-      paste0(paste0("('",
-                    paste(..., sep = "','"),
-                    "')"),
-             collapse = ",") 
+    parse_query <- function(dat) {
+
+      dat %>% 
+        mutate(date = paste0(date, "'"),
+               weekday = paste0("'", weekday, "'"),
+               room_no = paste0("'", room_no, "'"),
+               avail = paste0("'", map(avail, paste, collapse = "','"))) %>% 
+        tidyr::unite("q", date:avail, sep = ",") %>% 
+        select(q) %>% 
+        unlist()
     }
-    
-    query_am <- 
-      if ("am" %in% am){
-        parse_query(AM)
-      } else {NULL}
-    
-    query_pm <- 
-      if ("pm" %in% am) {
-        parse_query(PM)
-      } else {NULL}
-    
-    query_both <- 
-      if ("both" %in% am) {
-        parse_query(Both)
-      } else {NULL}
-    
-    query_neither <- 
-      if ("neither" %in% am) {
-        parse_query(Neither)
-      } else {NULL}
-    
-    l <- c(query_am, query_pm, query_both, query_neither)
-    
-    q <- paste(l, collapse = ",")
+
+    q <- parse_query(A)
     
   } else if (use == "booking") {
     
-    availability <- paste(paste0("'", avail[, 1]), avail[, 2], avail[, 3], avail[, 4],
-                          avail[, 5], avail[, 6],  avail[, 7], paste0(avail[, 8], "'"), sep = "','")
-    
-    A <- data_frame(date = date,
-                    room_no = room_no,
-                    avail = availability)
-    
-    A['weekday'] <- date_to_weekday(A$date)
-    
-    A <- A[, query_cols]
+    A <- tibble(date = date,
+                weekday = date_to_weekday(date),
+                room_no = room_no,
+                avail = list(avail))
     
     q <- parse_query(A)
-    
   }
   
   table_headings <- c("Weekday", "Room_no",
@@ -111,10 +61,9 @@ update_status <- function(room_no,             # single integer?
     sprintf(
       "INSERT INTO %s VALUES ('%s')", table, q),
     "ON DUPLICATE KEY UPDATE",
-    paste(sprintf("%1$s = VALUES(%1$s)", table_headings), collapse = ", ")
-  )
+    paste(sprintf("%1$s = VALUES(%1$s)", table_headings), collapse = ", "),
+    collapse = "; ")
 
-  print(query) #for debug
   db <- dbConnect(drv, #MySQL(),
                   dbname = database,
                   host = options()$edwinyu$host, 
