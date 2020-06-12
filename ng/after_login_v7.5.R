@@ -20,6 +20,7 @@ library(shinyhelper)
 
 source("update_status.R")
 source("CRUD_functions.R")
+source("dates_in_next_wk.R")
 
 
 # database source ----
@@ -43,6 +44,9 @@ options(edwinyu = list(
 
 drv <<- RSQLite::SQLite()
 database <- "room_avail.db"
+
+
+is_past <- function(date) as.Date(date) < Sys.Date()
 
 
 
@@ -137,58 +141,24 @@ server <- shinyServer(function(input, output, session) {
   user_data <- reactive({credentials()$info})
   time <- Sys.time()
   
-  # next_wk is a dataframe consisting two columns, date and day
-  # which corresponds to the date and day of the very next week    
+  next_wk <- dates_in_next_wk() #previously a
   
-  date_to_weekday <- function(date){format(as.Date(date), format = "%a")}
-  is_weekend <- function(date) date_to_weekday(date) %in% c("Sun","Sat")
-  
-  next_wk <- data.frame(date = rep(NA, 5),
-                        day = c("Mon", "Tue", "Wed", "Thu", "Fri"))
-  
-  if (is_weekend(Sys.Date())) {
-    
-    day <- Sys.Date()
-    
-    while (is_weekend(day)) {
-      day <- day + 1
-    }
-    
-    while(!is_weekend(day)) {
-      next_wk[next_wk$day == date_to_weekday(day), ]$date <- as.character(day)
-      day <- day + 1
-    }
-    
-  }else{
-    day <- Sys.Date() + 7
-    
-    while(!is_weekend(day)) {
-      day <- day - 1
-    }
-    day <- day + 1
-    
-    while(!is_weekend(day)) {
-      next_wk[next_wk$day == date_to_weekday(day), ]$date <- as.character(day)
-      day <- day + 1
-    }
-  }
-  
-  #diagram displaying current status of personal room information of the user  
+  # diagram displaying current status of personal room information of the user  
   output$personal <- DT::renderDataTable({
     req(credentials()$user_auth)
     updated_room <- loadData('room_avail', 'new_room_status')
     updated_room[updated_room$Room_no == individual$RoomNumber[individual$UserName == user_data()$ID] &
-                   as.Date(updated_room$Date)>=Sys.Date(), ]
+                   !is_past(updated_room$Date), ]
   },
   options = list(scrollX = TRUE)
   )
   
-  #diagram displaying all exisiting booking of user
+  # diagram displaying all exisiting booking of user
   output$cancel <- DT::renderDataTable({
     room_booked <- loadData("room_avail", "room_booked")
     room_booked$day <- date_to_weekday(room_booked$date)
     room_booked[room_booked$booker == user_data()$ID &
-                  as.Date(room_booked$date) >= Sys.Date(), ]
+                  !is_past(room_booked$date), ]
   })
   
   ## 1. Save Updated Room information   
@@ -243,7 +213,7 @@ server <- shinyServer(function(input, output, session) {
         req(credentials()$user_auth)
         updated_room = loadData('room_avail','new_room_status')
         updated_room = updated_room[updated_room$Room_no == individual$RoomNumber[individual$UserName == user_data()$ID] &
-                                      as.Date(updated_room$Date) >= Sys.Date(), ]
+                                      !is_past(updated_room$Date), ]
         updated_room},
       options = list(scrollX = TRUE)
     )
@@ -346,7 +316,7 @@ server <- shinyServer(function(input, output, session) {
                                  ncol = 4,
                                  nrow = length(unique_row_no))
     
-    for(j in 1:length(unique_row_no)){
+    for(j in seq_along(unique_row_no)){
       booking_candidate2[[j, 1]] <- table_shown[unique_row_no[j], 1]  
       booking_candidate2[[j, 2]] <- table_shown[unique_row_no[j], 2] 
       booking_candidate2[[j, 3]] <- table_shown[unique_row_no[j], 3] 
@@ -394,7 +364,7 @@ server <- shinyServer(function(input, output, session) {
       room_no <- candidate$Room_no
       room_status <- candidate[1:nrow(intervals), 4:11]
       
-      for(i in 1:nrow(intervals)){
+      for (i in 1:nrow(intervals)) {
         room_status[i, ][intervals[[i]] - 3] <- "Booked"
       }
       
@@ -406,7 +376,7 @@ server <- shinyServer(function(input, output, session) {
                     table = 'new_room_status')
       room_confirm <- ''
       
-      for(i in seq_along(unique_row_no)) {
+      for (i in seq_along(unique_row_no)) {
         room_confirm <- paste(room_confirm,
                               'room',room_no[i],"\n","(",booking_candidate2[i, 1],",",
                               date_to_weekday(as.character(booking_candidate2[i, 1])),",",
@@ -425,7 +395,7 @@ server <- shinyServer(function(input, output, session) {
         req(credentials()$user_auth)
         room_booked <- loadData("room_avail", "room_booked")
         room_booked$day <- date_to_weekday(room_booked$date)
-        room_booked[room_booked$booker == user_data()$ID & as.Date(room_booked$date) >= Sys.Date(), ]
+        room_booked[room_booked$booker == user_data()$ID & !is_past(room_booked$date), ]
       })
     }
   })
