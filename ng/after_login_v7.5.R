@@ -306,28 +306,28 @@ server <- shinyServer(function(input, output, session) {
     room_table <- loadData(database, 'new_room_status')
     n_rooms <- nrow(room_table)
     
-    avail_am <- NULL
-    avail_pm <- NULL
-    avail_both <- NULL
-    avail_neither <- rep(TRUE, n_rooms)
-    
     am_times <- c('9am_10am','10am_11am','11am_12pm')
     pm_times <- c('12pm_1pm','1pm_2pm','2pm_3pm', '3pm_4pm','4pm_5pm')
     
-    for (i in seq_len(n_rooms)){
-      avail_am[i]   <- any(room_table[i, am_times] == "Available")
-      avail_pm[i]   <- any(room_table[i, pm_times] == "Available")
-      avail_both[i] <- all(avail_am[i] + avail_pm[i])
-    }
-    
     search_time <- paste(input$cb_ampm, collapse = "")
     
-    lup_time <- list(am = avail_am,
-                     pm = avail_pm,
-                     ampm = avail_both,
-                     avail_neither)
+    # which days have morning or afternoon available?
     
-    avail <- unname(lup_time[search_time]) %>% unlist()
+    avail <- 
+      room_table %>%
+      as_tibble() %>%
+      melt(id.vars = c("Date", "Weekday", "Room_no"),
+           variable.name = "time") %>% 
+      mutate(am = ifelse(search_time == "ampm",
+                         "ampm",
+                         ifelse(time %in% am_times, "am", "pm"))) %>% 
+      group_by(Date, Room_no, am) %>% 
+      summarise(free = any(value == "Available")) %>% 
+      filter(am == search_time) %>%
+      ungroup() %>% 
+      select(free)
+    
+##TODO: test this...
     
     my_room_no <- individual$RoomNumber[individual$UserName == user_data()$ID]
     
