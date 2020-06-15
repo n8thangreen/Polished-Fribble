@@ -121,7 +121,7 @@ server <- shinyServer(function(input, output, session) {
   
   individual <- loadData(database, 'individual_information')
   individual_rb <- loadData(database, 'new_room_status')
-
+  
   # call the logout module with reactive trigger to hide/show
   logout_init <- callModule(shinyauthr::logout, 
                             id = "logout", 
@@ -254,13 +254,13 @@ server <- shinyServer(function(input, output, session) {
     avail_both <- NULL
     avail_neither <- rep(TRUE, n_rooms)
     
-    am_times <- c('9am-10am','10am-11am','11am-12pm') ##TODO: remove duplication
-    pm_times <- c('12pm-1pm','1pm-2pm','2pm-3pm', '3pm-4pm','4pm-5pm')
+    am_times <- c('9am_10am','10am_11am','11am_12pm') ##TODO: remove duplication
+    pm_times <- c('12pm_1pm','1pm_2pm','2pm_3pm', '3pm_4pm','4pm_5pm')
     
     for (i in seq_len(n_rooms)) {
-      avail_am[i]   <- any(room_table[i, 2:4] == "Available") # room_table[i, am_times] 
-      avail_pm[i]   <- any(room_table[i, 5:9] == "Available") # room_table[i, pm_times)] 
-      avail_both[i] <- any(room_table[i, 2:9] == "Available") # room_table[i, c(am_times, pm_times))] 
+      avail_am[i]   <- any(room_table[i, am_times] == "Available") 
+      avail_pm[i]   <- any(room_table[i, pm_times] == "Available")
+      avail_both[i] <- all(avail_am[i], avail_pm[i]) 
     }
     
     lup_time <- list(am = avail_am,
@@ -268,8 +268,8 @@ server <- shinyServer(function(input, output, session) {
                      ampm = avail_both,
                      avail_neither)
     
-    search_time <- paste(input$search, collapse = "")
-    avail <- unname(lup_time[search_time])
+    search_ampm <- paste(input$cb_ampm, collapse = "")
+    avail <- unname(lup_time[search_ampm]) %>% unlist()
     
     my_room_no <- individual$RoomNumber[individual$UserName == user_data()$ID]
     
@@ -284,16 +284,16 @@ server <- shinyServer(function(input, output, session) {
       options = list(scrollX = TRUE))
     
     output$cand_bookings <- renderPrint({
-      req(input$all_selected) 
+      req(input$all_cells_selected) 
       
-      if (nrow(input$all_selected) == 0) {
+      if (nrow(input$all_cells_selected) == 0) {
         cat('Please select the rooms')
       } else { 
-        row_id <- input$all_selected[, 1]
-        col_id <- input$all_selected[, 2]
-        booking_candidate <- data.frame(date = table_shown[row_id, 1], # table_shown[row_id, "date],
-                                        day = table_shown[row_id, 2],
-                                        room_no = table_shown[row_id, 3],
+        row_id <- input$all_cells_selected[, 1]
+        col_id <- input$all_cells_selected[, 2]
+        booking_candidate <- data.frame(date = table_shown[row_id, "Date"],
+                                        day = table_shown[row_id, "Weekday"],
+                                        room_no = table_shown[row_id, "Room_no"],
                                         time = colnames(table_shown)[col_id])
         booking_candidate
       }
@@ -304,86 +304,99 @@ server <- shinyServer(function(input, output, session) {
   observeEvent(input$book, {
     rt <- loadData(database, 'new_room_status')
     room_table <- loadData(database, 'new_room_status')
+    n_rooms <- nrow(room_table)
     
     avail_am <- NULL
     avail_pm <- NULL
     avail_both <- NULL
+    avail_neither <- rep(TRUE, n_rooms)
     
-    am_times <- c('9am-10am','10am-11am','11am-12pm')
-    pm_times <- c('12pm-1pm','1pm-2pm','2pm-3pm', '3pm-4pm','4pm-5pm')
+    am_times <- c('9am_10am','10am_11am','11am_12pm')
+    pm_times <- c('12pm_1pm','1pm_2pm','2pm_3pm', '3pm_4pm','4pm_5pm')
     
-    for (i in 1:nrow(room_table)){
-      avail_am[i]   <- any(room_table[i, 2:4] == "Available") # room_table[i, am_times] 
-      avail_pm[i]   <- any(room_table[i, 5:9] == "Available") # room_table[i, pm_times)] 
-      avail_both[i] <- any(room_table[i, 2:9] == "Available") # room_table[i, c(am_times, pm_times))] 
+    for (i in seq_len(n_rooms)){
+      avail_am[i]   <- any(room_table[i, am_times] == "Available")
+      avail_pm[i]   <- any(room_table[i, pm_times] == "Available")
+      avail_both[i] <- all(avail_am[i] + avail_pm[i])
     }
     
-    search_time <- paste(input$time2, collapse = "")
+    search_time <- paste(input$cb_ampm, collapse = "")
     
     lup_time <- list(am = avail_am,
                      pm = avail_pm,
                      ampm = avail_both,
                      avail_neither)
     
-    avail <- unname(lup_time[search_time])
+    avail <- unname(lup_time[search_time]) %>% unlist()
     
     my_room_no <- individual$RoomNumber[individual$UserName == user_data()$ID]
     
     selected_rt <- room_table[avail & room_table$Date %in% as.character(input$date2), ]
     table_shown <- selected_rt[selected_rt$Room_no != my_room_no, ]
     
-    index <- input$all_selected
-    row_id <- input$all_selected[, 1]
-    col_id <- input$all_selected[, 2]
+    index  <- input$all_cells_selected
+    row_id <- input$all_cells_selected[, 1]
+    col_id <- input$all_cells_selected[, 2]
+    
     booking_candidate <-
-      data.frame(
-        date = table_shown[row_id, 1],
-        day = table_shown[row_id, 2],
-        room_no = table_shown[row_id, 3],
+      tibble(
+        date = table_shown[row_id, "Date"],
+        day  = table_shown[row_id, "Weekday"],
+        room_no = table_shown[row_id, "Room_no"],
         time = colnames(table_shown)[col_id])
     
-    unique_row_no <- as.vector(unique(input$all_selected[, 1]))
-    booking_candidate2 <- matrix(data = list(),
-                                 ncol = 4,
-                                 nrow = length(unique_row_no))
+    unique_row_no <- as.vector(unique(row_id))
+    booking_cand <- list()
     
     for(j in seq_along(unique_row_no)){
-      booking_candidate2[[j, 1]] <- table_shown[unique_row_no[j], 1]  
-      booking_candidate2[[j, 2]] <- table_shown[unique_row_no[j], 2] 
-      booking_candidate2[[j, 3]] <- table_shown[unique_row_no[j], 3] 
-      booking_candidate2[[j, 4]] <- as.vector(index[index[, 1] == unique_row_no[j], 2])
+      row_idx <- unique_row_no[j]
+      
+      booking_cand[[j]] <-
+        list(Date = table_shown[row_idx, "Date"],
+             Weekday = table_shown[row_idx, "Weekday"],
+             Room_no = table_shown[row_idx, "Room_no"],
+             time_slots = list(index[row_id == row_idx, 2]))
     }
     
-    intervals <- as.matrix(booking_candidate2[, 4])
+    time_slots <- map_dfc(booking_cand, "time_slots")
     
+    ## all times available for each date?
     interval_avail <- NULL
+    
     for (i in seq_along(unique_row_no)) {
-      interval_avail <- rbind(interval_avail,
-                              apply(as.matrix(rt[,matrix(booking_candidate2[, 4][[i]])] == "Available"),
-                                    MARGIN = 1,
-                                    FUN = all))
+      
+      t <- time_slots[[i]]
+      
+      dat <- apply(as.matrix(rt[, t] == "Available"),
+                   MARGIN = 1,
+                   FUN = all)
+      
+      interval_avail <- rbind(interval_avail, dat)
     }
     
-    #The mechanism of booking supports only booking one room at a time
-    #User chooses day and (multiple) time slots to make the booking
-    #If no single room satisfying all requirements, a notification is shown to let users select fewer time slots at a time
+    # booking supports only booking one room at a time
+    # User chooses day and (multiple) time slots to make the booking
+    # If no single room satisfying all requirements
+    # a notification is shown to let users select fewer time slots at a time
+    
     candidate <- NULL
+    
     for (i in seq_along(unique_row_no)) {
       candidate <- rbind(candidate,
                          rt[interval_avail[i, ] &
-                              rt$Date == as.character(booking_candidate2[i, 1]) &
+                              rt$Date == as.character(booking_cand[[i]]$Date) &
                               rt$Room_no != my_room_no &
-                              rt$Room_no == booking_candidate2[i, 3], ])
+                              rt$Room_no == booking_cand[[i]]$Room_no, ])
     }
     
     if (nrow(candidate) == 0) {
-      if (length(intervals) > 1) {
+      if (length(time_slots) > 1) {
         showNotification("No room is available for all time slots of your choice. Try selecting fewer time slots at a time.",
                          type = "warning",
                          closeButton = TRUE,
                          duration = 30)
         
-       }else if (length(intervals) == 1) {
+      }else if (length(time_slots) == 1) {
         
         showNotification("No room is available for this time slot so far.",
                          type = "warning",
@@ -391,26 +404,39 @@ server <- shinyServer(function(input, output, session) {
                          duration = 30)}
     } else {
       room_no <- candidate$Room_no
-      room_status <- candidate[1:nrow(intervals), 4:11]
       
-      for (i in 1:nrow(intervals)) {
-        room_status[i, ][intervals[[i]] - 3] <- "Booked"
+      room_status <- candidate[, c("9am_10am", "10am_11am", "11am_12pm", "12pm_1pm", "1pm_2pm", "2pm_3pm", "3pm_4pm", "4pm_5pm")]
+      
+      # change status to booked
+      for (i in 1:nrow(room_status)) {
+        room_status[i, ][time_slots[[i]] - 3] <- "Booked"
       }
       
+      # change from Available -> Booked
       update_status(use = "booking",
                     room_no = room_no,
-                    date = as.character(booking_candidate2[, 1]), 
+                    date = as.character(booking_cand[[1]]$Date), 
                     avail = room_status,
                     database = database,
                     table = 'new_room_status')
-      room_confirm <- ''
+      
+      
+      update_booking(room_no = room_no,
+                     booker = user_data()$ID,
+                     date = as.character(booking_cand[[1]]$Date),
+                     time = time_slots,
+                     booking_no = NA,
+                     database = database,
+                     table = "room_booked")
+      
+      room_confirm <- NULL
       
       for (i in seq_along(unique_row_no)) {
         room_confirm <- paste(room_confirm,
                               'room', room_no[i], "\n",
-                              "(", booking_candidate2[i, 1], ",",
-                              date_to_weekday(as.character(booking_candidate2[i, 1])), ",",
-                              paste(colnames(rt)[intervals[[i]]], collapse = ' and '),
+                              "(", booking_cand[[i]]$Date, ",",
+                              date_to_weekday(as.character(booking_cand[[i]]$Date)), ",",
+                              paste(colnames(rt)[time_slots[[i]]], collapse = ' and '),
                               ")", sep = " ")
       }
       
@@ -420,7 +446,7 @@ server <- shinyServer(function(input, output, session) {
                        duration = 30,
                        closeButton = TRUE)
       
-      #update the booking information displayed
+      # update the booking information displayed
       output$cancel <- DT::renderDataTable({
         req(credentials()$user_auth)
         room_booked <- loadData(database, "room_booked")
@@ -548,14 +574,14 @@ server <- shinyServer(function(input, output, session) {
                                         "- Please select the date and the approximate time you wish to use other's office, and then press 'Search'.",
                                         "- If any room satisfys your requirements, it will be shown on the right.")
                      )),
-                 checkboxGroupInput("time2","Time",
+                 checkboxGroupInput("cb_ampm", "Time",
                                     choices = c("am","pm"),
                                     selected = ""),
                  actionButton("search", "Search", width = "25%"),
                  h4("Confirm rooms of your choice:"),
                  verbatimTextOutput('cand_bookings'),
                  verbatimTextOutput('test'),
-                 actionButton("book","Book", width = "25%") %>%
+                 actionButton("book", "Book", width = "25%") %>%
                    helper(
                      colour = "mediumpurple1",
                      type = "inline",

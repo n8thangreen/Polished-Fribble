@@ -9,13 +9,27 @@
 # so that when updating rows with the same Room_no and Date existing in the table
 # it modifies the exisitng row rather than adding a new row
 #
-update_status <- function(room_no,             # single integer?
-                          date,                # vector?
+update_status <- function(room_no,
+                          date,
                           use = "write",
-                          am = NA,             # vector?
+                          am = NA,
                           avail = NA,
                           database,
                           table) {
+  
+  # contain in speechmarks and paste together
+  ## dbQuoteLiteral() use?
+  parse_query <- function(dat) {
+    
+    dat %>% 
+      mutate(date = paste0(date, "'"),
+             weekday = paste0("'", weekday, "'"),
+             room_no = paste0("'", room_no, "'"),
+             avail = paste0("'", map(avail, paste, collapse = "','"))) %>% 
+      tidyr::unite("q", date:avail, sep = ",") %>% 
+      select(q) %>% 
+      unlist()
+  }
   
   if (use == "write") {
     
@@ -31,20 +45,6 @@ update_status <- function(room_no,             # single integer?
                 ) %>% 
       select(-am)
     
-    # contain in speech marks and paste together
-    ## dbQuoteLiteral() use?
-    parse_query <- function(dat) {
-
-      dat %>% 
-        mutate(date = paste0(date, "'"),
-               weekday = paste0("'", weekday, "'"),
-               room_no = paste0("'", room_no, "'"),
-               avail = paste0("'", map(avail, paste, collapse = "','"))) %>% 
-        tidyr::unite("q", date:avail, sep = ",") %>% 
-        select(q) %>% 
-        unlist()
-    }
-
     q <- parse_query(A)
     
   } else if (use == "booking") {
