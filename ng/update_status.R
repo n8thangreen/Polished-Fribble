@@ -1,9 +1,10 @@
 
-# For updating rows in table "new_room_status" from db "room_avail"
-## when use="write", the function inputs am="am"/"pm"/"both"/"neither", used for writing personal room status to the table
+# update rows in table "new_room_status" from db "room_avail"
+#
+# when use="write", the function inputs am="am"/"pm"/"both"/"neither", used for writing personal room status to the table
 # when use="booking", the function inputs avail
 # avail is an n by 8 matrix, each row corresponds to 8 periods for certain room on a specific day
-
+#
 # new_room_status is a table I created in MySQL with Room_no and Date as PRIMARY,
 # so that when updating rows with the same Room_no and Date existing in the table
 # it modifies the exisitng row rather than adding a new row
@@ -16,7 +17,7 @@ update_status <- function(room_no,             # single integer?
                           database,
                           table) {
   
-  if(use == "write"){
+  if (use == "write") {
     
     A <- tibble(date = date,
                 weekday = date_to_weekday(date),
@@ -30,6 +31,8 @@ update_status <- function(room_no,             # single integer?
                 ) %>% 
       select(-am)
     
+    # contain in speech marks and paste together
+    ## dbQuoteLiteral() use?
     parse_query <- function(dat) {
 
       dat %>% 
@@ -56,13 +59,24 @@ update_status <- function(room_no,             # single integer?
   
   table_headings <- c("Weekday", "Room_no",
                       "9am_10am", "10am_11am", "11am_12pm", "12pm_1pm", "1pm_2pm", "2pm_3pm", "3pm_4pm", "4pm_5pm")
+
+  # slightly different syntax
   
+  ## MYSQL  
+  # query <- paste(
+  #   sprintf(
+  #     "INSERT INTO %s VALUES ('%s')", table, q),
+  #   "ON DUPLICATE KEY UPDATE",
+  #   paste(sprintf("%1$s = VALUES(%1$s)", table_headings), collapse = ", "),
+  #   collapse = "; ")
+    
+  ## SQLite
   query <- paste(
     sprintf(
       "INSERT INTO %s VALUES ('%s')", table, q),
-    "ON DUPLICATE KEY UPDATE",
-    paste(sprintf("%1$s = VALUES(%1$s)", table_headings), collapse = ", "),
-    collapse = "; ")
+    "ON CONFLICT (Date, Room_no) DO UPDATE SET ",
+    paste(sprintf("'%1$s' = excluded.'%1$s'", table_headings), collapse = ", "))
+  
 
   db <- dbConnect(drv, #MySQL(),
                   dbname = database,
@@ -72,7 +86,7 @@ update_status <- function(room_no,             # single integer?
                   password = options()$edwinyu$password)
   on.exit(dbDisconnect(db))
   
-  dbGetQuery(db, query)
+  dbGetQuery(db, query)  #check.names=FALSE?
 }
 
 

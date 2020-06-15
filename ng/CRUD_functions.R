@@ -39,8 +39,8 @@ delete <- function(room_no,
 }
 
 
-# updating booking(for table room_booked)
-# room_booked is a table I created in MySQL with PRIMARY booking_no   
+# update booking for table room_booked
+#
 update_booking <- function(room_no,
                            booker,
                            date,

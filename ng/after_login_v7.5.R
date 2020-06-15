@@ -2,14 +2,11 @@
 library(shiny)
 library(shinyauthr)
 library(shinyjs)
-# Querying dataset
 library(tidyverse)
-# Hashing Passwords with 'sodium'
-library(sodium)
+library(sodium)         # Hashing Passwords with 'sodium'
 library(shinydashboard)
 library(jsonlite)
-# Define a json data format for data storage and querying
-library(rjson)
+library(rjson)          # Define json data format for data storage, querying
 library(RSQLite)
 library(RJSONIO)
 library(DBI)
@@ -63,39 +60,55 @@ body <- dashboardBody(
   ),
   shinyauthr::loginUI("login"),
   tabItems(
-    tabItem("Room_Status_Update", uiOutput("UI1")),
-    tabItem("Room_booking", uiOutput("UI2")),
-    tabItem("Room_booked", uiOutput("UI3"))
+    tabItem(tabName = "Room_status_update", uiOutput("room_status")),
+    tabItem(tabName = "Room_booking", uiOutput("room_booking")),
+    tabItem(tabName = "Room_booked", uiOutput("room_booked"))
   ),
   
   # actionButton("change_schedule", "Click Me to Adjust Schedule")
   HTML('<div data-iframe-height></div>')
-  
-)# End of body
-
-#Side bar
-sidebar <- dashboardSidebar(
-  collapsed = TRUE,
-  sidebarMenuOutput('menu')
 )
 
-# Define UI for application that draws a histogram
+# -------------------------------------------------------------------------
+
+sidebar <- dashboardSidebar(
+  collapsed = TRUE,
+  sidebarMenu(width = 70,
+              menuItem(text = 'Room Status Update',
+                       tabName = 'Room_status_update',
+                       icon = icon('table')),
+              menuItem(text = 'Room booking',
+                       tabName = 'Room_booking',
+                       icon = icon('table')), 
+              menuItem(text = "My Booked Room",
+                       tabName = 'Room_booked',
+                       icon = icon('table'))
+  )
+)
+
+# -------------------------------------------------------------------------
+
+header <-  dashboardHeader(
+  title = "Welcome to Polished Fribble!",
+  titleWidth = 450,
+  tags$li(class = "dropdown",
+          style = "padding: 8px;",
+          shinyauthr::logoutUI("logout")),
+  tags$li(class = "dropdown",
+          tags$a(icon("github"), 
+                 href = "https://github.com/paulc91/shinyauthr",
+                 title = "See the code on github")))
+
+# -------------------------------------------------------------------------
+
 ui <- dashboardPage(
-  dashboardHeader(
-    title = "Welcome to Polished Fribble!",
-    titleWidth = 450,
-    tags$li(class = "dropdown",
-            style = "padding: 8px;",
-            shinyauthr::logoutUI("logout")),
-    tags$li(class = "dropdown",
-            tags$a(icon("github"), 
-                   href = "https://github.com/paulc91/shinyauthr",
-                   title = "See the code on github"))),
+  header = header,
   sidebar = sidebar,
   body = body,
   skin = "purple"
 )
 
+# -------------------------------------------------------------------------
 
 server <- shinyServer(function(input, output, session) {
   
@@ -140,26 +153,25 @@ server <- shinyServer(function(input, output, session) {
   
   user_info <- reactive({credentials()$info})
   
-  # pulls out the user information returned from login module
+  # pull out user information from login module
   user_data <- reactive({credentials()$info})
   time <- Sys.time()
   
   next_wk <- dates_in_next_wk() #previously a
   
   
-  # diagram displaying current status of personal room information of the user  
+  # diagram displaying current status of personal room information of user  
   output$personal <- DT::renderDataTable({
     req(credentials()$user_auth)
     updated_room <- loadData(database, 'new_room_status')
     
     my_room_no <- individual$RoomNumber[individual$UserName == user_data()$ID]  ##TODO: remove duplication of this line
     updated_room[updated_room$Room_no == my_room_no & 
-                   !is_past(updated_room$Date), ]
-  },
-  options = list(scrollX = TRUE)
+                   !is_past(updated_room$Date), ]},
+    options = list(scrollX = TRUE)
   )
   
-  # diagram displaying all exisiting booking of user
+  # diagram displaying all existing booking of user
   output$cancel <- DT::renderDataTable({
     room_booked <- loadData(database, "room_booked")
     room_booked$day <- date_to_weekday(room_booked$date)
@@ -169,7 +181,7 @@ server <- shinyServer(function(input, output, session) {
   
   ## 1. Save Updated Room information   
   
-  observeEvent(input$save1, {   
+  observeEvent(input$save_room, {   
     
     date_update <- input$date1
     
@@ -189,8 +201,12 @@ server <- shinyServer(function(input, output, session) {
     #if it exists, it first checks if any time slot has been booked and then decide whether to update
     #if it doesn't exist, the row is updated directly without checking
     
-    if (nrow(rt[rt$Room_no == my_room_no &
-                rt$Date == date_update, ]) == 0) {
+    rows_existing <- rt$Room_no == my_room_no & rt$Date == date_update
+    is_existing_record <-  any(rows_existing)
+    
+    ##TODO: simplify these ifs...duplication
+    
+    if (!is_existing_record) {
       
       update_status(use = "write",
                     room_no = my_room_no,
@@ -198,15 +214,14 @@ server <- shinyServer(function(input, output, session) {
                     am = am,
                     database = database,
                     table = 'new_room_status')
-    }else{
-      if (any(as.matrix(rt[rt$Room_no == my_room_no &
-                          rt$Date == date_update, ] == "Booked"))) {
+    } else {
+      if (any(as.matrix(rt[rows_existing, ] == "Booked"))) {
         
         showNotification("Someone has booked your room already. Please contact admin.",
                          type = "error",
                          duration = 30,
                          closeButton = TRUE)
-      }else{
+      } else {
         update_status(use = "write",
                       room_no = my_room_no,
                       date = date_update,
@@ -224,7 +239,7 @@ server <- shinyServer(function(input, output, session) {
         updated_room},
       options = list(scrollX = TRUE)
     )
-  })    
+  })
   
   ## 2. search for available room information
   
@@ -232,16 +247,20 @@ server <- shinyServer(function(input, output, session) {
     
     req(input$date2)
     room_table <- loadData(database, 'new_room_status')
+    n_rooms <- nrow(room_table)
     
     avail_am <- NULL
     avail_pm <- NULL
     avail_both <- NULL
-    avail_neither <- rep(TRUE, nrow(room_table))
+    avail_neither <- rep(TRUE, n_rooms)
     
-    for(i in 1:nrow(room_table)){
-      avail_am[i]   <- any(room_table[i, 2:4] == "Available")
-      avail_pm[i]   <- any(room_table[i, 5:9] == "Available")
-      avail_both[i] <- any(room_table[i, 2:9] == "Available")
+    am_times <- c('9am-10am','10am-11am','11am-12pm') ##TODO: remove duplication
+    pm_times <- c('12pm-1pm','1pm-2pm','2pm-3pm', '3pm-4pm','4pm-5pm')
+    
+    for (i in seq_len(n_rooms)) {
+      avail_am[i]   <- any(room_table[i, 2:4] == "Available") # room_table[i, am_times] 
+      avail_pm[i]   <- any(room_table[i, 5:9] == "Available") # room_table[i, pm_times)] 
+      avail_both[i] <- any(room_table[i, 2:9] == "Available") # room_table[i, c(am_times, pm_times))] 
     }
     
     lup_time <- list(am = avail_am,
@@ -265,13 +284,14 @@ server <- shinyServer(function(input, output, session) {
       options = list(scrollX = TRUE))
     
     output$cand_bookings <- renderPrint({
-      req(input$all_cells_selected) 
-      if (nrow(input$all_cells_selected) == 0) {
+      req(input$all_selected) 
+      
+      if (nrow(input$all_selected) == 0) {
         cat('Please select the rooms')
       } else { 
-        row_id <- input$all_cells_selected[, 1]
-        col_id <- input$all_cells_selected[, 2]
-        booking_candidate <- data.frame(date = table_shown[row_id, 1],
+        row_id <- input$all_selected[, 1]
+        col_id <- input$all_selected[, 2]
+        booking_candidate <- data.frame(date = table_shown[row_id, 1], # table_shown[row_id, "date],
                                         day = table_shown[row_id, 2],
                                         room_no = table_shown[row_id, 3],
                                         time = colnames(table_shown)[col_id])
@@ -289,10 +309,13 @@ server <- shinyServer(function(input, output, session) {
     avail_pm <- NULL
     avail_both <- NULL
     
+    am_times <- c('9am-10am','10am-11am','11am-12pm')
+    pm_times <- c('12pm-1pm','1pm-2pm','2pm-3pm', '3pm-4pm','4pm-5pm')
+    
     for (i in 1:nrow(room_table)){
-      avail_am[i]   <- any(room_table[i, 2:4] == "Available")
-      avail_pm[i]   <- any(room_table[i, 5:9] == "Available")
-      avail_both[i] <- any(room_table[i, 2:9] == "Available")
+      avail_am[i]   <- any(room_table[i, 2:4] == "Available") # room_table[i, am_times] 
+      avail_pm[i]   <- any(room_table[i, 5:9] == "Available") # room_table[i, pm_times)] 
+      avail_both[i] <- any(room_table[i, 2:9] == "Available") # room_table[i, c(am_times, pm_times))] 
     }
     
     search_time <- paste(input$time2, collapse = "")
@@ -309,9 +332,9 @@ server <- shinyServer(function(input, output, session) {
     selected_rt <- room_table[avail & room_table$Date %in% as.character(input$date2), ]
     table_shown <- selected_rt[selected_rt$Room_no != my_room_no, ]
     
-    index <- input$all_cells_selected
-    row_id <- input$all_cells_selected[, 1]
-    col_id <- input$all_cells_selected[, 2]
+    index <- input$all_selected
+    row_id <- input$all_selected[, 1]
+    col_id <- input$all_selected[, 2]
     booking_candidate <-
       data.frame(
         date = table_shown[row_id, 1],
@@ -319,7 +342,7 @@ server <- shinyServer(function(input, output, session) {
         room_no = table_shown[row_id, 3],
         time = colnames(table_shown)[col_id])
     
-    unique_row_no <- as.vector(unique(input$all_cells_selected[, 1]))
+    unique_row_no <- as.vector(unique(input$all_selected[, 1]))
     booking_candidate2 <- matrix(data = list(),
                                  ncol = 4,
                                  nrow = length(unique_row_no))
@@ -353,22 +376,20 @@ server <- shinyServer(function(input, output, session) {
                               rt$Room_no == booking_candidate2[i, 3], ])
     }
     
-    if(nrow(candidate) == 0){
-      if(length(intervals) > 1){
+    if (nrow(candidate) == 0) {
+      if (length(intervals) > 1) {
         showNotification("No room is available for all time slots of your choice. Try selecting fewer time slots at a time.",
                          type = "warning",
                          closeButton = TRUE,
                          duration = 30)
         
-      }else if(length(intervals) == 1){
+       }else if (length(intervals) == 1) {
         
         showNotification("No room is available for this time slot so far.",
                          type = "warning",
                          closeButton = TRUE,
-                         duration = 30)
-      }
-      
-    }else{
+                         duration = 30)}
+    } else {
       room_no <- candidate$Room_no
       room_status <- candidate[1:nrow(intervals), 4:11]
       
@@ -386,10 +407,11 @@ server <- shinyServer(function(input, output, session) {
       
       for (i in seq_along(unique_row_no)) {
         room_confirm <- paste(room_confirm,
-                              'room',room_no[i],"\n","(",booking_candidate2[i, 1],",",
-                              date_to_weekday(as.character(booking_candidate2[i, 1])),",",
-                              paste(colnames(rt)[intervals[[i]]],
-                                    collapse = ' and '),")", sep = " ")
+                              'room', room_no[i], "\n",
+                              "(", booking_candidate2[i, 1], ",",
+                              date_to_weekday(as.character(booking_candidate2[i, 1])), ",",
+                              paste(colnames(rt)[intervals[[i]]], collapse = ' and '),
+                              ")", sep = " ")
       }
       
       room_confirm <- paste("You have successfully booked", room_confirm)
@@ -463,7 +485,8 @@ server <- shinyServer(function(input, output, session) {
                        closeButton = TRUE)
     }
   })
-  output$UI1 <- renderUI({
+  
+  output$room_status <- renderUI({
     req(credentials()$user_auth)
     fluidPage(box(width=3,
                   h4("Tell others when your room will be available for booking now!"),
@@ -485,7 +508,7 @@ server <- shinyServer(function(input, output, session) {
                   checkboxGroupInput("time1","Time",
                                      choices = c("am","pm"),
                                      selected = ""),
-                  actionButton("save1", "Save", width = "25%")),
+                  actionButton("save_room", "Save", width = "25%")),
               box(width = 9,
                   dataTableOutput(outputId = 'personal')) %>%
                 helper(
@@ -506,7 +529,7 @@ server <- shinyServer(function(input, output, session) {
               ))
   })
   
-  output$UI2 <- renderUI({
+  output$room_booking <- renderUI({
     
     individual <- loadData(database, 'individual_information')
     
@@ -555,7 +578,8 @@ server <- shinyServer(function(input, output, session) {
         dataTableOutput(outputId = 'all'))
     )
   })
-  output$UI3 <- renderUI({
+  
+  output$room_booked <- renderUI({
     req(credentials()$user_auth)
     fluidPage(box(width = 3,
                   h4("Cancel the booked room"),
@@ -578,20 +602,7 @@ server <- shinyServer(function(input, output, session) {
         dataTableOutput(outputId = 'cancel'))
     )
   })
-  output$menu = renderMenu({
-    req(credentials()$user_auth)
-    sidebarMenu(width = 70,
-                menuItem(text = 'Room Status Update',
-                         tabName = 'Room_Status_Update',
-                         icon = icon('table')),
-                menuItem(text = 'Room booking',
-                         tabName = 'Room_booking',
-                         icon = icon('table')), 
-                menuItem(text = "My Booked Room",
-                         tabName = 'Room_booked',
-                         icon = icon('table')))
-  })
-}) 
+})
 
 # Run the application 
 shinyApp(ui = ui, server = server)
