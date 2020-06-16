@@ -2,17 +2,19 @@
 library(shiny)
 library(shinyauthr)
 library(shinyjs)
-library(tidyverse)
-library(sodium)         # Hashing Passwords with 'sodium'
+library(shinyhelper)
 library(shinydashboard)
+library(sodium)         # Hashing Passwords with 'sodium'
 library(jsonlite)
 library(rjson)          # Define json data format for data storage, querying
-library(RSQLite)
 library(RJSONIO)
-library(DBI)
-library(RMySQL)
 library(DT)
-library(shinyhelper)
+library(DBI)
+library(RSQLite)
+library(RMySQL)
+library(tidyverse)
+library(reshape2)
+
 
 
 source("update_status.R")
@@ -318,16 +320,14 @@ server <- shinyServer(function(input, output, session) {
       as_tibble() %>%
       melt(id.vars = c("Date", "Weekday", "Room_no"),
            variable.name = "time") %>% 
-      mutate(am = ifelse(search_time == "ampm",
+      mutate(am = ifelse(search_time == "ampm",       # group by time of day
                          "ampm",
                          ifelse(time %in% am_times, "am", "pm"))) %>% 
       group_by(Date, Room_no, am) %>% 
-      summarise(free = any(value == "Available")) %>% 
+      summarise(free = any(value == "Available")) %>%  # at least one free slot?
       filter(am == search_time) %>%
       ungroup() %>% 
       select(free)
-    
-##TODO: test this...
     
     my_room_no <- individual$RoomNumber[individual$UserName == user_data()$ID]
     
@@ -338,32 +338,29 @@ server <- shinyServer(function(input, output, session) {
     row_id <- input$all_cells_selected[, 1]
     col_id <- input$all_cells_selected[, 2]
     
-    booking_candidate <-
-      tibble(
-        date = table_shown[row_id, "Date"],
-        day  = table_shown[row_id, "Weekday"],
-        room_no = table_shown[row_id, "Room_no"],
-        time = colnames(table_shown)[col_id])
-    
-    unique_row_no <- as.vector(unique(row_id))
+    num_dates <- as.vector(unique(row_id))
     booking_cand <- list()
     
-    for(j in seq_along(unique_row_no)){
-      row_idx <- unique_row_no[j]
+    for(j in seq_along(num_dates)){
+      row_idx <- num_dates[j]
       
       booking_cand[[j]] <-
         list(Date = table_shown[row_idx, "Date"],
              Weekday = table_shown[row_idx, "Weekday"],
              Room_no = table_shown[row_idx, "Room_no"],
-             time_slots = list(index[row_id == row_idx, 2]))
+             time_slots = index[row_id == row_idx, 2])
     }
     
-    time_slots <- map_dfc(booking_cand, "time_slots")
+    # time in hours not index
+    
+    slots_9to5 <- c("9am_10am", "10am_11am", "11am_12pm", "12pm_1pm", "1pm_2pm", "2pm_3pm", "3pm_4pm", "4pm_5pm")
+    time_lup <- setNames(slots_9to5, 4:11)
+    time_slots <- map(map(booking_cand, "time_slots"), function(x) time_lup[x])
     
     ## all times available for each date?
     interval_avail <- NULL
     
-    for (i in seq_along(unique_row_no)) {
+    for (i in seq_along(num_dates)) {
       
       t <- time_slots[[i]]
       
@@ -381,7 +378,7 @@ server <- shinyServer(function(input, output, session) {
     
     candidate <- NULL
     
-    for (i in seq_along(unique_row_no)) {
+    for (i in seq_along(num_dates)) {
       candidate <- rbind(candidate,
                          rt[interval_avail[i, ] &
                               rt$Date == as.character(booking_cand[[i]]$Date) &
@@ -403,27 +400,27 @@ server <- shinyServer(function(input, output, session) {
                          closeButton = TRUE,
                          duration = 30)}
     } else {
-      room_no <- candidate$Room_no
+      room_no_to_book <- candidate$Room_no
+      dates_to_book <- candidate$Date
       
-      room_status <- candidate[, c("9am_10am", "10am_11am", "11am_12pm", "12pm_1pm", "1pm_2pm", "2pm_3pm", "3pm_4pm", "4pm_5pm")]
+      room_status <- candidate[, slots_9to5]
       
       # change status to booked
       for (i in 1:nrow(room_status)) {
-        room_status[i, ][time_slots[[i]] - 3] <- "Booked"
+        room_status[i, time_slots[[i]]] <- "Booked"
       }
       
       # change from Available -> Booked
       update_status(use = "booking",
-                    room_no = room_no,
-                    date = as.character(booking_cand[[1]]$Date), 
+                    room_no = room_no_to_book,
+                    date = dates_to_book, 
                     avail = room_status,
                     database = database,
                     table = 'new_room_status')
       
-      
-      update_booking(room_no = room_no,
+      update_booking(room_no = room_no_to_book,
                      booker = user_data()$ID,
-                     date = as.character(booking_cand[[1]]$Date),
+                     date = dates_to_book,
                      time = time_slots,
                      booking_no = NA,
                      database = database,
@@ -431,11 +428,11 @@ server <- shinyServer(function(input, output, session) {
       
       room_confirm <- NULL
       
-      for (i in seq_along(unique_row_no)) {
+      for (i in seq_along(num_dates)) {
         room_confirm <- paste(room_confirm,
-                              'room', room_no[i], "\n",
-                              "(", booking_cand[[i]]$Date, ",",
-                              date_to_weekday(as.character(booking_cand[[i]]$Date)), ",",
+                              'room', room_no_to_book[i], "\n",
+                              "(", dates_to_book[i], ",",
+                              date_to_weekday(dates_to_book[i]), ",",
                               paste(colnames(rt)[time_slots[[i]]], collapse = ' and '),
                               ")", sep = " ")
       }
@@ -632,4 +629,5 @@ server <- shinyServer(function(input, output, session) {
 
 # Run the application 
 shinyApp(ui = ui, server = server)
+# runApp("after_login_v7.5.R", display.mode = "showcase")
 

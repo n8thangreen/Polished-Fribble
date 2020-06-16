@@ -69,11 +69,7 @@ update_booking <- function(room_no,
   values <- matrix(c(booking_no, date, room_no, booker), nrow = 1)
   dat <- values[rep(1, length(time)), ]
 
-  time_slots <-
-    c("9am_10am", "10am_11am", "11am_12pm", "12pm_1pm", "1pm_2pm", "2pm_3pm", "3pm_4pm", "4pm_5pm") %>%
-    setNames(4:11)
-  
-  q <- cbind(dat, time = time_slots[time])
+  q <- cbind(dat, time = time)
   
   # parse to query
   q <- 
