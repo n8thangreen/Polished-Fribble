@@ -46,8 +46,8 @@ delete <- function(room_no,
 update_booking <- function(room_no,
                            booker,
                            date,
-                           time,
-                           booking_no,
+                           time,       # list
+                           booking_no = NA,
                            database,
                            table){
   
@@ -60,16 +60,27 @@ update_booking <- function(room_no,
   on.exit(dbDisconnect(db), add = TRUE)
   
   # create unique booking ref
-  # ...
+  if (is.na(booking_no)) {
+    
+    max_booking_no <- dbGetQuery(db, "SELECT MAX(booking_no) FROM ", table)
+    new_booking_no <- max_booking_no + 1:length(date) 
+  }
   
   value_names <- c("booking_no", "date", "time", "room_no", "booker")
   
-  # matrix each row time slot
-  time <- unlist(time)
-  values <- matrix(c(booking_no, date, room_no, booker), nrow = 1)
-  dat <- values[rep(1, length(time)), ]
-
-  q <- cbind(dat, time = time)
+  q <- list()
+  
+  for (i in seq_along(date)) {
+    
+    # matrix of each row time slot
+    time <- unlist(time[[i]])
+    values <- matrix(c(booking_no[i], date[i], room_no[i], booker), nrow = 1)
+    dat <- values[rep(1, length(time[[i]])), ]
+    
+    q[[i]] <- cbind(dat, time = time[[i]])
+  }
+  
+  q <- do.call(q, rbind)
   
   # parse to query
   q <- 
