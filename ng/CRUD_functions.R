@@ -75,9 +75,9 @@ update_booking <- function(room_no,
     # matrix of each row time slot
     time <- unlist(time[[i]])
     values <- matrix(c(booking_no[i], date[i], room_no[i], booker), nrow = 1)
-    dat <- values[rep(1, length(time[[i]])), ]
+    dat <- values[rep(1, length(time)), ]
     
-    q[[i]] <- cbind(dat, time = time[[i]])
+    q[[i]] <- cbind(dat, time = time)
   }
   
   q <- do.call(q, rbind)
