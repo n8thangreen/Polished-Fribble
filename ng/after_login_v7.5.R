@@ -1,4 +1,6 @@
 
+# options(shiny.error = browser())
+
 library(shiny)
 library(shinyauthr)
 library(shinyjs)
@@ -248,40 +250,13 @@ server <- shinyServer(function(input, output, session) {
   observeEvent(input$search, {
     
     req(input$date2)
-    room_table <- loadData(database, 'new_room_status')
-    n_rooms <- nrow(room_table)
     
-    avail_am <- NULL
-    avail_pm <- NULL
-    avail_both <- NULL
-    avail_neither <- rep(TRUE, n_rooms)
-    
-    am_times <- c('9am_10am','10am_11am','11am_12pm') ##TODO: remove duplication
-    pm_times <- c('12pm_1pm','1pm_2pm','2pm_3pm', '3pm_4pm','4pm_5pm')
-    
-    for (i in seq_len(n_rooms)) {
-      avail_am[i]   <- any(room_table[i, am_times] == "Available") 
-      avail_pm[i]   <- any(room_table[i, pm_times] == "Available")
-      avail_both[i] <- all(avail_am[i], avail_pm[i]) 
-    }
-    
-    lup_time <- list(am = avail_am,
-                     pm = avail_pm,
-                     ampm = avail_both,
-                     avail_neither)
-    
-    search_ampm <- paste(input$cb_ampm, collapse = "")
-    avail <- unname(lup_time[search_ampm]) %>% unlist()
-    
-    my_room_no <- individual$RoomNumber[individual$UserName == user_data()$ID]
-    
-    selected_rt <- room_table[avail & room_table$Date %in% as.character(input$date2), ]
-    table_shown <- selected_rt[selected_rt$Room_no != my_room_no, ]
+    table_shown <- tableShown(input)
     
     output$all <- DT::renderDataTable({
       req(credentials()$user_auth)
       table_shown},
-      selection = list(mode = "multiple",
+      selection = list(mode = "multiple",  # pick date-time cells
                        target = "cell"),
       options = list(scrollX = TRUE))
     
@@ -293,6 +268,7 @@ server <- shinyServer(function(input, output, session) {
       } else { 
         row_id <- input$all_cells_selected[, 1]
         col_id <- input$all_cells_selected[, 2]
+        
         booking_candidate <- data.frame(date = table_shown[row_id, "Date"],
                                         day = table_shown[row_id, "Weekday"],
                                         room_no = table_shown[row_id, "Room_no"],
@@ -304,58 +280,33 @@ server <- shinyServer(function(input, output, session) {
   
   ## 3. book the room
   observeEvent(input$book, {
-    rt <- loadData(database, 'new_room_status')
-    room_table <- loadData(database, 'new_room_status')
-    n_rooms <- nrow(room_table)
     
-    am_times <- c('9am_10am','10am_11am','11am_12pm')
-    pm_times <- c('12pm_1pm','1pm_2pm','2pm_3pm', '3pm_4pm','4pm_5pm')
-    
-    search_time <- paste(input$cb_ampm, collapse = "")
-    
-    # which days have morning or afternoon available?
-    
-    avail <- 
-      room_table %>%
-      as_tibble() %>%
-      melt(id.vars = c("Date", "Weekday", "Room_no"),
-           variable.name = "time") %>% 
-      mutate(am = ifelse(search_time == "ampm",       # group by time of day
-                         "ampm",
-                         ifelse(time %in% am_times, "am", "pm"))) %>% 
-      group_by(Date, Room_no, am) %>% 
-      summarise(free = any(value == "Available")) %>%  # at least one free slot?
-      filter(am == search_time) %>%
-      ungroup() %>% 
-      select(free)
-    
-    my_room_no <- individual$RoomNumber[individual$UserName == user_data()$ID]
-    
-    selected_rt <- room_table[avail & room_table$Date %in% as.character(input$date2), ]
-    table_shown <- selected_rt[selected_rt$Room_no != my_room_no, ]
+    table_shown <- tableShown(input)
     
     index  <- input$all_cells_selected
     row_id <- input$all_cells_selected[, 1]
     col_id <- input$all_cells_selected[, 2]
+    
+    # time in hours not index
+    
+    slots_9to5 <- c("9am_10am", "10am_11am", "11am_12pm", "12pm_1pm", "1pm_2pm", "2pm_3pm", "3pm_4pm", "4pm_5pm")
+    time_lup <- setNames(slots_9to5, 4:11)
     
     num_dates <- as.vector(unique(row_id))
     booking_cand <- list()
     
     for(j in seq_along(num_dates)){
       row_idx <- num_dates[j]
+      time_slot_cols <- as.character(index[row_id == row_idx, 2])
       
       booking_cand[[j]] <-
         list(Date = table_shown[row_idx, "Date"],
              Weekday = table_shown[row_idx, "Weekday"],
              Room_no = table_shown[row_idx, "Room_no"],
-             time_slots = index[row_id == row_idx, 2])
+             time_slots = time_lup[time_slot_cols])
     }
     
-    # time in hours not index
-    
-    slots_9to5 <- c("9am_10am", "10am_11am", "11am_12pm", "12pm_1pm", "1pm_2pm", "2pm_3pm", "3pm_4pm", "4pm_5pm")
-    time_lup <- setNames(slots_9to5, 4:11)
-    time_slots <- map(map(booking_cand, "time_slots"), function(x) time_lup[x])
+    time_slots <- map(booking_cand, "time_slots")
     
     ## all times available for each date?
     interval_avail <- NULL
@@ -376,14 +327,16 @@ server <- shinyServer(function(input, output, session) {
     # If no single room satisfying all requirements
     # a notification is shown to let users select fewer time slots at a time
     
+    rt <- loadData(database, 'new_room_status')
     candidate <- NULL
     
     for (i in seq_along(num_dates)) {
       candidate <- rbind(candidate,
-                         rt[interval_avail[i, ] &
-                              rt$Date == as.character(booking_cand[[i]]$Date) &
-                              rt$Room_no != my_room_no &
-                              rt$Room_no == booking_cand[[i]]$Room_no, ])
+                         rt[
+                           interval_avail[i, ] &
+                             rt$Date == as.character(booking_cand[[i]]$Date) &
+                             rt$Room_no != my_room_no &
+                             rt$Room_no == booking_cand[[i]]$Room_no, ])
     }
     
     if (nrow(candidate) == 0) {
