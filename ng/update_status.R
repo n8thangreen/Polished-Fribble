@@ -31,6 +31,9 @@ update_status <- function(room_no,
       unlist()
   }
   
+  time_slots <- c("9am_10am", "10am_11am", "11am_12pm", "12pm_1pm",
+                  "1pm_2pm", "2pm_3pm", "3pm_4pm", "4pm_5pm")
+  
   if (use == "write") {
     
     A <- tibble(date = date,
@@ -52,7 +55,7 @@ update_status <- function(room_no,
     A <- tibble(date = date,
                 weekday = date_to_weekday(date),
                 room_no = room_no,
-                avail = list(avail))
+                avail = list(avail[, time_slots]))
     
     q <- parse_query(A)
   }

@@ -177,7 +177,7 @@ server <- shinyServer(function(input, output, session) {
   
   # diagram displaying all existing booking of user
   output$cancel <- DT::renderDataTable({
-    booked_table <- loadData(database, "booked_table")
+    booked_table <- loadData(database, "room_booked")
     booked_table$day <- date_to_weekday(booked_table$date)
     booked_table[booked_table$booker == user_data()$ID &
                   !is_past(booked_table$date), ]
@@ -402,7 +402,7 @@ server <- shinyServer(function(input, output, session) {
       # update the booking information displayed
       output$cancel <- DT::renderDataTable({
         req(credentials()$user_auth)
-        booked_table <- loadData(database, "booked_table")
+        booked_table <- loadData(database, "room_booked")
         booked_table$day <- date_to_weekday(booked_table$date)
         booked_table[booked_table$booker == user_data()$ID & !is_past(booked_table$date), ]
       })
@@ -419,19 +419,19 @@ server <- shinyServer(function(input, output, session) {
     
     if (input$booking_no %in% booked_table$booking_no) {
       
-      delete_Info <- booked_table[booked_table$booking_no == input$booking_no, ]
+      delete_info <- booked_table[booked_table$booking_no == input$booking_no, ]
       
       avail <- room_table %>% 
-        filter(Date == delete_Info$date,
-               Room_no == delete_Info$room_no)
+        filter(Date == delete_info$date,
+               Room_no == delete_info$room_no)
       
-      avail[1, delete_Info$time] <- "Available"
+      avail[1, delete_info$time] <- "Available"
       
       my_room_no <- indiv_table$RoomNumber[indiv_table$UserName == user_data()$ID]
       
       delete_booking(input$booking_no,
                      database = database,
-                     table = "booked_table")
+                     table = "room_booked")
       
       update_status(use = "booking",
                     room_no = my_room_no,
@@ -442,7 +442,7 @@ server <- shinyServer(function(input, output, session) {
       
       output$cancel <- DT::renderDataTable({
         req(credentials()$user_auth)
-        booked_table <- loadData(database, "booked_table")
+        booked_table <- loadData(database, "room_booked")
         booked_table$day <- date_to_weekday(booked_table$date)
         booked_table[booked_table$booker == user_data()$ID, ]
       })
