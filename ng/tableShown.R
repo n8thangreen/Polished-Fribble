@@ -1,26 +1,26 @@
 
 # filtered room status for each date
+# to display for search
+# and working out which date-times clicked
 #
-tableShown <- function(input) {
- 
+tableShown <- function(input, username) {
+  
+  indiv_table <- loadData(database, 'individual_information')
   room_table <- loadData(database, 'new_room_status')
+  
   n_rooms <- nrow(room_table)
   
   am_times <- c('9am_10am','10am_11am','11am_12pm')
-  pm_times <- c('12pm_1pm','1pm_2pm','2pm_3pm', '3pm_4pm','4pm_5pm')
   
   search_time <- paste(input$cb_ampm, collapse = "")
   
   # which days have morning or afternoon available?
   
-  room_table_long <-
+  avail_ampm <- 
     room_table %>%
     as_tibble() %>%
     melt(id.vars = c("Date", "Weekday", "Room_no"),
-         variable.name = "time") 
-  
-  avail <- 
-    room_table_long %>% 
+         variable.name = "time") %>% 
     mutate(am = ifelse(search_time == "ampm",       # group by time of day
                        "ampm",
                        ifelse(time %in% am_times, "am", "pm"))) %>% 
@@ -30,9 +30,9 @@ tableShown <- function(input) {
     ungroup() %>% 
     select(free)
   
-  my_room_no <- individual$RoomNumber[individual$UserName == user_data()$ID]
+  my_room_no <- indiv_table$RoomNumber[indiv_table$UserName == username]
   
-  table_shown <- room_table[avail &
+  table_shown <- room_table[avail_ampm &
                               room_table$Date %in% as.character(input$date2) &
                               room_table$Room_no != my_room_no, ]
   table_shown

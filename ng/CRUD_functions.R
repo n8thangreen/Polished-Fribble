@@ -62,8 +62,13 @@ update_booking <- function(room_no,
   # create unique booking ref
   if (is.na(booking_no)) {
     
-    max_booking_no <- dbGetQuery(db, "SELECT MAX(booking_no) FROM ", table)
-    new_booking_no <- max_booking_no + 1:length(date) 
+    max_booking_no <-
+      dbGetQuery(db,
+                 sprintf("SELECT MAX(booking_no) FROM %s WHERE typeof(booking_no) = 'integer'", table)) %>% 
+      unlist()
+    
+    if (length(max_booking_no) == 0) max_booking_no <- 0L
+    booking_no <- max_booking_no + 1:length(date) 
   }
   
   value_names <- c("booking_no", "date", "time", "room_no", "booker")
@@ -75,12 +80,12 @@ update_booking <- function(room_no,
     # matrix of each row time slot
     time <- unlist(time[[i]])
     values <- matrix(c(booking_no[i], date[i], room_no[i], booker), nrow = 1)
-    dat <- values[rep(1, length(time)), ]
+    dat <- values[rep(1, length(time)), , drop = FALSE]
     
     q[[i]] <- cbind(dat, time = time)
   }
   
-  q <- do.call(q, rbind)
+  q <- do.call(rbind, q)
   
   # parse to query
   q <- 

@@ -22,6 +22,7 @@ library(reshape2)
 source("update_status.R")
 source("CRUD_functions.R")
 source("dates_in_next_wk.R")
+source("tableShown.R")
 
 
 # database source ----
@@ -123,9 +124,8 @@ server <- shinyServer(function(input, output, session) {
   
   observe_helpers(help_dir = "helpfiles", withMathJax = FALSE)
   
-  individual <- loadData(database, 'individual_information')
-  individual_rb <- loadData(database, 'new_room_status')
-  
+  indiv_table <- loadData(database, 'individual_information')
+
   # call the logout module with reactive trigger to hide/show
   logout_init <- callModule(shinyauthr::logout, 
                             id = "logout", 
@@ -135,10 +135,10 @@ server <- shinyServer(function(input, output, session) {
   # and reactive trigger
   login_info <-
     data.frame(
-      ID = individual$UserName,
-      Password = individual$Password,
-      Password_Hash = sapply(individual$Password, sodium::password_store),
-      Permissions = individual$Permissions)
+      ID = indiv_table$UserName,
+      Password = indiv_table$Password,
+      Password_Hash = sapply(indiv_table$Password, sodium::password_store),
+      Permissions = indiv_table$Permissions)
   
   credentials <- callModule(shinyauthr::login,
                             id = "login", 
@@ -167,11 +167,11 @@ server <- shinyServer(function(input, output, session) {
   # diagram displaying current status of personal room information of user  
   output$personal <- DT::renderDataTable({
     req(credentials()$user_auth)
-    updated_room <- loadData(database, 'new_room_status')
+    room_table <- loadData(database, 'new_room_status')
     
-    my_room_no <- individual$RoomNumber[individual$UserName == user_data()$ID]  ##TODO: remove duplication of this line
-    updated_room[updated_room$Room_no == my_room_no & 
-                   !is_past(updated_room$Date), ]},
+    my_room_no <- indiv_table$RoomNumber[indiv_table$UserName == user_data()$ID]  ##TODO: remove duplication of this line
+    room_table[room_table$Room_no == my_room_no & 
+                   !is_past(room_table$Date), ]},
     options = list(scrollX = TRUE)
   )
   
@@ -194,9 +194,9 @@ server <- shinyServer(function(input, output, session) {
     available_time1 <- paste(input$time1, collapse = "")
     am <- unname(lup_time[available_time1])
     
-    rt <- loadData(database, 'new_room_status')
+    room_table <- loadData(database, 'new_room_status')
     
-    my_room_no <- individual$RoomNumber[individual$UserName == user_data()$ID]
+    my_room_no <- indiv_table$RoomNumber[indiv_table$UserName == user_data()$ID]
     
     #If a room has been booked by some else(after user first updating their information)
     #The user cannot change the room status again, and a notification is shown for asking him to contact admin
@@ -205,7 +205,7 @@ server <- shinyServer(function(input, output, session) {
     #if it exists, it first checks if any time slot has been booked and then decide whether to update
     #if it doesn't exist, the row is updated directly without checking
     
-    rows_existing <- rt$Room_no == my_room_no & rt$Date == date_update
+    rows_existing <- room_table$Room_no == my_room_no & room_table$Date == date_update
     is_existing_record <-  any(rows_existing)
     
     ##TODO: simplify these ifs...duplication
@@ -219,7 +219,7 @@ server <- shinyServer(function(input, output, session) {
                     database = database,
                     table = 'new_room_status')
     } else {
-      if (any(as.matrix(rt[rows_existing, ] == "Booked"))) {
+      if (any(as.matrix(room_table[rows_existing, ] == "Booked"))) {
         
         showNotification("Someone has booked your room already. Please contact admin.",
                          type = "error",
@@ -237,10 +237,10 @@ server <- shinyServer(function(input, output, session) {
     output$personal <- DT::renderDataTable(
       {
         req(credentials()$user_auth)
-        updated_room = loadData(database, 'new_room_status')
-        updated_room = updated_room[updated_room$Room_no == my_room_no &
-                                      !is_past(updated_room$Date), ]
-        updated_room},
+        room_table = loadData(database, 'new_room_status')
+        room_table = room_table[room_table$Room_no == my_room_no &
+                                      !is_past(room_table$Date), ]
+        room_table},
       options = list(scrollX = TRUE)
     )
   })
@@ -251,7 +251,7 @@ server <- shinyServer(function(input, output, session) {
     
     req(input$date2)
     
-    table_shown <- tableShown(input)
+    table_shown <- tableShown(input, user_data()$ID)
     
     output$all <- DT::renderDataTable({
       req(credentials()$user_auth)
@@ -281,7 +281,9 @@ server <- shinyServer(function(input, output, session) {
   ## 3. book the room
   observeEvent(input$book, {
     
-    table_shown <- tableShown(input)
+    room_table <- loadData(database, 'new_room_status')
+    
+    table_shown <- tableShown(input, user_data()$ID)
     
     index  <- input$all_cells_selected
     row_id <- input$all_cells_selected[, 1]
@@ -315,7 +317,7 @@ server <- shinyServer(function(input, output, session) {
       
       t <- time_slots[[i]]
       
-      dat <- apply(as.matrix(rt[, t] == "Available"),
+      dat <- apply(as.matrix(room_table[, t] == "Available"),
                    MARGIN = 1,
                    FUN = all)
       
@@ -327,16 +329,17 @@ server <- shinyServer(function(input, output, session) {
     # If no single room satisfying all requirements
     # a notification is shown to let users select fewer time slots at a time
     
-    rt <- loadData(database, 'new_room_status')
+    my_room_no <- indiv_table$RoomNumber[indiv_table$UserName == user_data()$ID]
+    
     candidate <- NULL
     
     for (i in seq_along(num_dates)) {
       candidate <- rbind(candidate,
-                         rt[
+                         room_table[
                            interval_avail[i, ] &
-                             rt$Date == as.character(booking_cand[[i]]$Date) &
-                             rt$Room_no != my_room_no &
-                             rt$Room_no == booking_cand[[i]]$Room_no, ])
+                             room_table$Date == as.character(booking_cand[[i]]$Date) &
+                             room_table$Room_no != my_room_no &
+                             room_table$Room_no == booking_cand[[i]]$Room_no, ])
     }
     
     if (nrow(candidate) == 0) {
@@ -359,7 +362,7 @@ server <- shinyServer(function(input, output, session) {
       room_status <- candidate[, slots_9to5]
       
       # change status to booked
-      for (i in 1:nrow(room_status)) {
+      for (i in seq_along(num_dates)) {
         room_status[i, time_slots[[i]]] <- "Booked"
       }
       
@@ -386,7 +389,7 @@ server <- shinyServer(function(input, output, session) {
                               'room', room_no_to_book[i], "\n",
                               "(", dates_to_book[i], ",",
                               date_to_weekday(dates_to_book[i]), ",",
-                              paste(colnames(rt)[time_slots[[i]]], collapse = ' and '),
+                              paste(time_slots[[i]], collapse = ' and '),
                               ")", sep = " ")
       }
       
@@ -410,7 +413,7 @@ server <- shinyServer(function(input, output, session) {
   observeEvent(input$cancel, {
     
     room_booked <- loadData(database, "room_booked")
-    rt <- loadData(database, 'new_room_status')
+    room_table <- loadData(database, 'new_room_status')
     
     date_update <- input$date1
     
@@ -418,13 +421,13 @@ server <- shinyServer(function(input, output, session) {
       
       delete_Info <- room_booked[room_booked$booking_no == input$booking_no, ]
       
-      avail <- rt %>% 
+      avail <- room_table %>% 
         filter(Date == delete_Info$date,
                Room_no == delete_Info$room_no)
       
       avail[1, delete_Info$time] <- "Available"
       
-      my_room_no <- individual$RoomNumber[individual$UserName == user_data()$ID]
+      my_room_no <- indiv_table$RoomNumber[indiv_table$UserName == user_data()$ID]
       
       delete_booking(input$booking_no,
                      database = database,
@@ -507,7 +510,7 @@ server <- shinyServer(function(input, output, session) {
   
   output$room_booking <- renderUI({
     
-    individual <- loadData(database, 'individual_information')
+    indiv_table <- loadData(database, 'individual_information')
     
     req(credentials()$user_auth)
     fluidRow(box(width=3,
@@ -565,7 +568,7 @@ server <- shinyServer(function(input, output, session) {
                       type = "inline",
                       size = "m",
                       title = 'Guidance:',
-                      content = c("Insert the booking number to the room that you no longer need")),
+                      content = c("Inseroom_table the booking number to the room that you no longer need")),
                   actionButton("cancel", "Cancel Booking", width = "50%"),
                   tags$head(
                     tags$style(
