@@ -1,13 +1,16 @@
 
-# update rows in table "new_room_status" from db "room_avail"
+# Update status
 #
-# when use="write", the function inputs am="am"/"pm"/"both"/"neither", used for writing personal room status to the table
-# when use="booking", the function inputs avail
+# update rows in table "new_room_status" from database "room_avail"
+#
+#   use = "write", function inputs am="am"/"pm"/"both"/"neither", used for writing personal room status to the table
+#   use = "booking", the function inputs avail
+#
 # avail is an n by 8 matrix, each row corresponds to 8 periods for certain room on a specific day
 #
-# new_room_status is a table I created in MySQL with Room_no and Date as PRIMARY,
+# new_room_status is a table created in MySQL with Room_no and Date as PRIMARY,
 # so that when updating rows with the same Room_no and Date existing in the table
-# it modifies the exisitng row rather than adding a new row
+# it modifies the existing row rather than adding a new row
 #
 update_status <- function(room_no,
                           date,
@@ -92,23 +95,3 @@ update_status <- function(room_no,
   dbGetQuery(db, query)  #check.names=FALSE?
 }
 
-
-# test
-
-# date <- c("2020-06-12", "2020-06-13")
-# use <- "write"
-# room_no <- 1
-# am <- c("am", "both")
-# table <- 'new_room_status'
-# database <- 'room_avail'
-# 
-# avail <- setNames(data.frame('Unavailable','Unavailable','Unavailable',
-#                              'Available','Available','Available','Available','Available'), NULL)
-
-
-# update_status(use = use,
-#               room_no = room_no,
-#               date = date,
-#               am = am,
-#               database = 'room_avail',
-#               table = 'new_room_status')
