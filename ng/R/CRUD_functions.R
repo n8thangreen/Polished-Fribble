@@ -46,7 +46,7 @@ delete <- function(room_no,
 update_booking <- function(room_no,
                            booker,
                            date,
-                           time,       # list
+                           time_idx,       # list
                            booking_no = NA,
                            database,
                            table){
@@ -58,6 +58,8 @@ update_booking <- function(room_no,
                   user = options()$edwinyu$user, 
                   password = options()$edwinyu$password)
   on.exit(dbDisconnect(db), add = TRUE)
+  
+  time_slots <- time_lup(time_idx)
   
   # create unique booking ref
   if (is.na(booking_no)) {
@@ -78,7 +80,7 @@ update_booking <- function(room_no,
   for (i in seq_along(date)) {
     
     # matrix of each row time slot
-    time <- unlist(time[[i]])
+    time <- unlist(time_slots[[i]])
     values <- matrix(c(booking_no[i], date[i], room_no[i], booker), nrow = 1)
     dat <- values[rep(1, length(time)), , drop = FALSE]
     

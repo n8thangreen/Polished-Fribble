@@ -1,12 +1,11 @@
 
 #
-room_confirm_msg <- function(num_dates,
-                             room_no_to_book,
+room_confirm_msg <- function(room_no_to_book,
                              dates_to_book,
                              time_slots) {
   room_confirm <- NULL
   
-  for (i in seq_along(num_dates)) {
+  for (i in seq_along(dates_to_book)) {
     room_confirm <- paste(room_confirm,
                           'room', room_no_to_book[i], "\n",
                           "(", dates_to_book[i], ",",

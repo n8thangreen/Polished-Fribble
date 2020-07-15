@@ -318,9 +318,7 @@ server <- shinyServer(function(input, output, session) {
     } else {
       room_no_to_book <- candidate$Room_no
       dates_to_book <- candidate$Date
-      
-      col_id <- input$all_cells_selected[, 2]
-      time_slots <- time_lup(col_id)
+      times_to_book <- time_lup(input$all_cells_selected)
       
       # change from Available -> Booked
       update_status(use = "booking",
@@ -333,15 +331,14 @@ server <- shinyServer(function(input, output, session) {
       update_booking(room_no = room_no_to_book,
                      booker = user_data()$ID,
                      date = dates_to_book,
-                     time = time_slots,
+                     time_idx = input$all_cells_selected,
                      booking_no = NA,
                      database = database,
                      table = "room_booked")
       
-      showNotification(room_confirm_msg(num_dates,
-                                        room_no_to_book,
+      showNotification(room_confirm_msg(room_no_to_book,
                                         dates_to_book,
-                                        time_slots),
+                                        times_to_book),
                        type = "message",
                        duration = 30,
                        closeButton = TRUE)
