@@ -22,28 +22,20 @@ create_candidate_table <- function(input,
   row_id <- input$all_cells_selected[, 1]
   col_id <- input$all_cells_selected[, 2]
   
-  # time in hours not index
-  
-  slots_9to5 <- c("9am_10am", "10am_11am", "11am_12pm", "12pm_1pm",
-                  "1pm_2pm", "2pm_3pm", "3pm_4pm", "4pm_5pm")
-  
-  time_lup <- setNames(slots_9to5, 4:11)
-  
+  time_slots <- time_lup(index)
   num_dates <- as.vector(unique(row_id))
+  
   booking_cand <- list()
   
   for (j in seq_along(num_dates)) {
     row_idx <- num_dates[j]
-    time_slot_cols <- as.character(index[row_id == row_idx, 2])
     
     booking_cand[[j]] <-
       list(Date = table_shown[row_idx, "Date"],
            Weekday = table_shown[row_idx, "Weekday"],
            Room_no = table_shown[row_idx, "Room_no"],
-           time_slots = time_lup[time_slot_cols])
+           time_slots = time_slots[[j]])
   }
-  
-  time_slots <- map(booking_cand, "time_slots")
   
   ## all times available for each date?
   interval_avail <- NULL

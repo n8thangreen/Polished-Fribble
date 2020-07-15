@@ -25,6 +25,7 @@ source("R/dates_in_next_wk.R")
 source("R/tableShown.R")
 source("R/room_confirm_msg.R")
 source("R/create_candidate_table.R")
+source("R/time_lup.R")
 
 
 # database source ----
@@ -317,6 +318,9 @@ server <- shinyServer(function(input, output, session) {
     } else {
       room_no_to_book <- candidate$Room_no
       dates_to_book <- candidate$Date
+      
+      col_id <- input$all_cells_selected[, 2]
+      time_slots <- time_lup(col_id)
       
       # change from Available -> Booked
       update_status(use = "booking",
