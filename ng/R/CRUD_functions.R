@@ -17,11 +17,11 @@ loadData <- function(database, table) {
 
 # delete rows in table "new_room_status" from db "room_avail"
 #
-delete <- function(room_no,
-                   date_1,
-                   date_2 = date_1,
-                   database,
-                   table) {
+delete_status <- function(room_no,
+                          date_1,
+                          date_2 = date_1,
+                          database,
+                          table) {
   
   db <- dbConnect(drv,
                   dbname = database,
@@ -46,7 +46,7 @@ delete <- function(room_no,
 update_booking <- function(room_no,
                            booker,
                            date,
-                           time_idx,       # list
+                           time_idx,        # list
                            booking_no = NA,
                            database,
                            table){
@@ -61,17 +61,7 @@ update_booking <- function(room_no,
   
   time_slots <- time_lup(time_idx)
   
-  # create unique booking ref
-  if (is.na(booking_no)) {
-    
-    max_booking_no <-
-      dbGetQuery(db,
-                 sprintf("SELECT MAX(booking_no) FROM %s WHERE typeof(booking_no) = 'integer'", table)) %>% 
-      unlist()
-    
-    if (length(max_booking_no) == 0) max_booking_no <- 0L
-    booking_no <- max_booking_no + 1:length(date) 
-  }
+  booking_no <- new_booking_no(booking_no, db, table, date)
   
   value_names <- c("booking_no", "date", "time", "room_no", "booker")
   
@@ -119,7 +109,7 @@ update_booking <- function(room_no,
       " ON CONFLICT (date, time, room_no) DO UPDATE SET ",
       paste(sprintf("'%1$s' = excluded.'%1$s'", value_names), collapse = ", "), ";"),
     collapse = " ")
-    
+  
   dbGetQuery(db, query)
 }
 
@@ -141,3 +131,25 @@ delete_booking <- function(booking_no,
   
   dbSendQuery(db, query)
 }
+
+
+# create unique booking ref
+#
+new_booking_no <- function(booking_no,
+                           db,
+                           table,
+                           date) {
+  
+  if (!is.na(booking_no)) return(booking_no)
+  
+  max_booking_no <-
+    dbGetQuery(db,
+               sprintf("SELECT MAX(booking_no) FROM %s WHERE typeof(booking_no) = 'integer'", table)) %>% 
+    unlist()
+  
+  if (length(max_booking_no) == 0 | is.na(max_booking_no))
+    max_booking_no <- 0L
+  
+  max_booking_no + 1:length(date) 
+}
+

@@ -214,6 +214,7 @@ server <- shinyServer(function(input, output, session) {
     
     rows_existing <- room_table$Room_no == my_room_no & room_table$Date == date_update
     is_existing_record <-  any(rows_existing)
+    is_already_booked <- any(as.matrix(room_table[rows_existing, ] == "Booked"))
     
     ##TODO: simplify these ifs...duplication
     
@@ -226,7 +227,7 @@ server <- shinyServer(function(input, output, session) {
                     database = database,
                     table = 'new_room_status')
     } else {
-      if (any(as.matrix(room_table[rows_existing, ] == "Booked"))) {
+      if (is_already_booked) {
         
         showNotification("Someone has booked your room already. Please contact admin.",
                          type = "error",
@@ -353,7 +354,7 @@ server <- shinyServer(function(input, output, session) {
     }
   })
   
-  ## 4.cancel the room booking
+  ## 4. cancel the room booking
   observeEvent(input$cancel, {
     
     booked_table <- loadData(database, "room_booked")
@@ -401,8 +402,8 @@ server <- shinyServer(function(input, output, session) {
                        type = "message",
                        duration = 30,
                        closeButton = TRUE)
-    }else{
-      showNotification(paste("Your booking reference number does not exist, recheck it please!"),
+    } else {
+      showNotification(paste("Your booking reference number does not exist, recheck it please"),
                        type = "message",
                        duration = 30,
                        closeButton = TRUE)
@@ -412,7 +413,7 @@ server <- shinyServer(function(input, output, session) {
   output$room_status <- renderUI({
     req(credentials()$user_auth)
     fluidPage(box(width = 3,
-                  h4("Tell others when your room will be available for booking now!"),
+                  h4("Tell others when your room will be available for booking now"),
                   wellPanel(
                     dateInput('date_update',
                               label = 'Date',
@@ -447,7 +448,7 @@ server <- shinyServer(function(input, output, session) {
                               "Unavailable: Your room cannot be booked for this time slot",
                               "Booked     : Others have booked your room for this time slot, you can no longer make changes on this day",
                               " ",
-                              "To check for the availability of others' rooms and make bookings, please go to Room Booking:) ")
+                              "To check for the availability of others' rooms and make bookings, please go to Room Booking")
                 ),
               tags$head(
                 tags$style(
