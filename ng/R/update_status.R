@@ -14,7 +14,7 @@
 #' it modifies the existing row rather than adding a new row
 #'
 #' @param room_no 
-#' @param date 
+#' @param date Format "2020-06-13"
 #' @param use 
 #' @param am 
 #' @param avail Room availability. From 9am to 5pm either Available or Unavailable. Matrix.
@@ -80,27 +80,29 @@ update_status <- function(room_no,
   }
   
   table_headings <- c("Weekday", "Room_no",
-                      "9am_10am", "10am_11am", "11am_12pm", "12pm_1pm", "1pm_2pm", "2pm_3pm", "3pm_4pm", "4pm_5pm")
+                      "9am_10am", "10am_11am", "11am_12pm",
+                      "12pm_1pm", "1pm_2pm", "2pm_3pm", "3pm_4pm", "4pm_5pm")
   
   # slightly different syntax
+  if (class(drv) == "MySQLDriver") {
+    
+    query <- paste(
+      sprintf(
+        "INSERT INTO %s VALUES ('%s')", table, q),
+      "ON DUPLICATE KEY UPDATE",
+      paste(sprintf("%1$s = VALUES(%1$s)", table_headings), collapse = ", "),
+      collapse = "; ")
+    
+  } else if (class(drv) == "SQLiteDriver") {
+    
+    query <- paste(
+      sprintf(
+        "INSERT INTO %s VALUES ('%s')", table, q),
+      "ON CONFLICT (Date, Room_no) DO UPDATE SET ",
+      paste(sprintf("'%1$s' = excluded.'%1$s'", table_headings), collapse = ", "))
+  }
   
-  ## MYSQL  
-  # query <- paste(
-  #   sprintf(
-  #     "INSERT INTO %s VALUES ('%s')", table, q),
-  #   "ON DUPLICATE KEY UPDATE",
-  #   paste(sprintf("%1$s = VALUES(%1$s)", table_headings), collapse = ", "),
-  #   collapse = "; ")
-  
-  ## SQLite
-  query <- paste(
-    sprintf(
-      "INSERT INTO %s VALUES ('%s')", table, q),
-    "ON CONFLICT (Date, Room_no) DO UPDATE SET ",
-    paste(sprintf("'%1$s' = excluded.'%1$s'", table_headings), collapse = ", "))
-  
-  
-  db <- dbConnect(drv, #MySQL(),
+  db <- dbConnect(drv,
                   dbname = database,
                   host = options()$edwinyu$host, 
                   port = options()$edwinyu$port,
