@@ -11,6 +11,7 @@ loadData <- function(database, table) {
   on.exit(dbDisconnect(db), add = TRUE)
   
   query <- sprintf("SELECT * FROM %s", table)
+  
   dbGetQuery(db, query)
 }
 

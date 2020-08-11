@@ -18,14 +18,14 @@ library(tidyverse)
 library(reshape2)
 
 
-
-source("R/update_status.R")
-source("R/CRUD_functions.R")
-source("R/dates_in_next_wk.R")
-source("R/tableShown.R")
-source("R/room_confirm_msg.R")
-source("R/create_candidate_table.R")
-source("R/time_lup.R")
+source("../R/update_status.R")
+source("../R/CRUD_functions.R")
+source("../R/dates_in_next_wk.R")
+source("../R/tableShown.R")
+source("../R/room_confirm_msg.R")
+source("../R/create_candidate_table.R")
+source("../R/time_lup.R")
+source("../R/helper_fns.R")
 
 
 # database source ----
@@ -49,14 +49,7 @@ options(edwinyu = list(
 ))
 
 drv <<- RSQLite::SQLite()
-database <<- "room_avail.db"
-
-
-is_past <- function(date) as.Date(date) < Sys.Date()
-
-abbr <- function(x){substr(x, 1, 3)}
-
-date_to_weekday <<- function(date) {format(as.Date(date), format = "%a")}
+database <<- "../sql/room_avail.db"
 
 # reset database
 # file.copy(from = "schema_room_avail.db", to = database, overwrite = TRUE)
@@ -122,11 +115,6 @@ ui <- dashboardPage(
 # -------------------------------------------------------------------------
 
 server <- shinyServer(function(input, output, session) {
-  
-  # Currently read from the database I created remotely (based on a free server)
-  # It's safer and maybe run faster if changing for a better server
-  # Note that the host, username and password below is for the server
-  # NOT FOR THE INDIVIDUAL USERS OF THE LOGIN SYSTEM
   
   observe_helpers(help_dir = "helpfiles", withMathJax = FALSE)
   

@@ -1,17 +1,29 @@
 
-# Update status
-#
-# update rows in table "new_room_status" from database "room_avail"
-#
-#   use = "write", function inputs am="am"/"pm"/"both"/"neither", used for writing personal room status to the table
-#   use = "booking", the function inputs avail
-#
-# avail is an n by 8 matrix, each row corresponds to 8 periods for certain room on a specific day
-#
-# new_room_status is a table created in MySQL with Room_no and Date as PRIMARY,
-# so that when updating rows with the same Room_no and Date existing in the table
-# it modifies the existing row rather than adding a new row
-#
+#' Update status
+#'
+#' update rows in table "new_room_status" from database "room_avail"
+#'
+#' - "write", function inputs am="am"/"pm"/"both"/"neither",
+#'      used for writing personal (own) room status to the table
+#' - "booking", the function inputs avail. used for someone else's room
+#'
+#' avail is an n by 8 matrix, each row corresponds to 8 periods for certain room on a specific day
+#'
+#' new_room_status is a table created in MySQL with Room_no and Date as PRIMARY,
+#' so that when updating rows with the same Room_no and Date existing in the table
+#' it modifies the existing row rather than adding a new row
+#'
+#' @param room_no 
+#' @param date 
+#' @param use 
+#' @param am 
+#' @param avail Room availability. From 9am to 5pm either Available or Unavailable. Matrix.
+#' @param database 
+#' @param table 
+#'
+#' @return
+#' @export
+#'
 update_status <- function(room_no,
                           date,
                           use = "write",
@@ -20,7 +32,7 @@ update_status <- function(room_no,
                           database,
                           table = 'new_room_status') {
   
-  # contain in speechmarks and paste together
+  # contain in speech marks and paste together
   ## dbQuoteLiteral() use?
   parse_query <- function(dat) {
     
@@ -59,7 +71,7 @@ update_status <- function(room_no,
     A <- tibble(date = date,
                 weekday = date_to_weekday(date),
                 room_no = room_no) %>% 
-      cbind.data.frame(as_tibble(avail)) %>% 
+      cbind.data.frame(as_tibble(avail, .name_repair = "minimal")) %>% 
       group_by(date, weekday, room_no) %>%
       nest() %>% 
       rename(avail = data)
@@ -96,6 +108,7 @@ update_status <- function(room_no,
                   password = options()$edwinyu$password)
   on.exit(dbDisconnect(db))
   
-  sapply(query, FUN = function(x) dbGetQuery(conn = db, x))
+  # sapply(query, FUN = function(x) dbGetQuery(conn = db, x))
+  sapply(query, FUN = function(x) dbExecute(conn = db, x))
 }
 
