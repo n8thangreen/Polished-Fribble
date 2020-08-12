@@ -27,6 +27,9 @@ source("../R/create_candidate_table.R")
 source("../R/time_lup.R")
 source("../R/helper_fns.R")
 
+# modules
+source("../R/searchAvailRoom.R")
+
 
 # database source ----
 
@@ -65,7 +68,7 @@ body <- dashboardBody(
   shinyauthr::loginUI("login"),
   tabItems(
     tabItem(tabName = "Room_status_update", uiOutput("room_status")),
-    tabItem(tabName = "Room_booking", uiOutput("room_booking")),
+    tabItem(tabName = "Room_booking", searchAvailRoomUI("room_booking")),
     tabItem(tabName = "Room_booked", uiOutput("room_booked"))
   ),
   
@@ -121,9 +124,15 @@ server <- shinyServer(function(input, output, session) {
   indiv_table <- loadData(database, 'individual_information')
   
   # call the logout module with reactive trigger to hide/show
-  logout_init <- callModule(shinyauthr::logout, 
+  logout_init <- callModule(module = shinyauthr::logout, 
                             id = "logout", 
                             active = reactive(credentials()$user_auth))
+  ##TODO: can we replace above?
+  # logout_init <- moduleServer(id = "logout",
+  #                             module = function(input, output, session) {
+  #                               active <- reactive(credentials()$user_auth)
+  #                               shinyauthr::logout(input, output, session, active)
+  #                             })
   
   # call login module supplying data frame, user and password cols
   # and reactive trigger
@@ -151,12 +160,13 @@ server <- shinyServer(function(input, output, session) {
   
   user_info <- reactive({credentials()$info})
   
+  ##TODO: why is this duplicated?...
   # pull out user information from login module
   user_data <- reactive({credentials()$info})
+  
   time <- Sys.time()
   
   next_wk <- dates_in_next_wk() # previously 'a'
-  
   
   # diagram displaying current status of personal room information of user  
   output$personal <- DT::renderDataTable({
@@ -240,108 +250,7 @@ server <- shinyServer(function(input, output, session) {
       options = list(scrollX = TRUE)
     )
   })
-  
-  ## 2. search for available room information
-  
-  observeEvent(input$search, {
     
-    req(input$date_search)
-    
-    table_shown <- tableShown(input$checkbox_ampm, input$date_search, user_data()$ID)
-    
-    output$all <- DT::renderDataTable({
-      req(credentials()$user_auth)
-      table_shown},
-      selection = list(mode = "multiple",  # pick date-time cells
-                       target = "cell"),
-      options = list(scrollX = TRUE))
-    
-    output$cand_bookings <- renderPrint({
-      req(input$all_cells_selected) 
-      
-      if (nrow(input$all_cells_selected) == 0) {
-        cat('Please select the rooms')
-      } else { 
-        row_id <- input$all_cells_selected[, 1]
-        col_id <- input$all_cells_selected[, 2]
-        
-        booking_candidate <- data.frame(date = table_shown[row_id, "Date"],
-                                        day = table_shown[row_id, "Weekday"],
-                                        room_no = table_shown[row_id, "Room_no"],
-                                        time = colnames(table_shown)[col_id])
-        booking_candidate
-      }
-    })
-  })
-  
-  observeEvent(input$reset, {
-    output$all <- NULL
-  })  
-  
-  ## 3. book a room
-  
-  observeEvent(input$book, {
-    
-    candidate <- create_candidate_table(input, user_data()$ID)
-    
-    if (is.null(candidate)) {
-      showNotification("Please make a selection",
-                       type = "warning",
-                       closeButton = TRUE,
-                       duration = 30)
-      
-    } else if (nrow(candidate) == 0) {
-      if (nrow(input$all_cells_selected) > 1) {
-        showNotification("No room is available for all time slots of your choice.
-                         Try selecting fewer time slots at a time.",
-                         type = "warning",
-                         closeButton = TRUE,
-                         duration = 30)
-        
-      } else if (nrow(input$all_cells_selected) == 1) {
-        
-        showNotification("No room is available for this time slot so far.",
-                         type = "warning",
-                         closeButton = TRUE,
-                         duration = 30)}
-    } else {
-      room_no_to_book <- candidate$Room_no
-      dates_to_book <- candidate$Date
-      times_to_book <- time_lup(input$all_cells_selected)
-      
-      # change from Available -> Booked
-      update_status(use = "booking",
-                    room_no = room_no_to_book,
-                    date = dates_to_book, 
-                    avail = candidate,
-                    database = database,
-                    table = 'new_room_status')
-      
-      update_booking(room_no = room_no_to_book,
-                     booker = user_data()$ID,
-                     date = dates_to_book,
-                     time_idx = input$all_cells_selected,
-                     booking_no = NA,
-                     database = database,
-                     table = "room_booked")
-      
-      showNotification(room_confirm_msg(room_no_to_book,
-                                        dates_to_book,
-                                        times_to_book),
-                       type = "message",
-                       duration = 30,
-                       closeButton = TRUE)
-      
-      # update the booking information displayed
-      output$cancel <- DT::renderDataTable({
-        req(credentials()$user_auth)
-        booked_table <- loadData(database, "room_booked")
-        booked_table$day <- date_to_weekday(booked_table$date)
-        booked_table[booked_table$booker == user_data()$ID & !is_past(booked_table$date), ]
-      })
-    }
-  })
-  
   ## 4. cancel the room booking
   observeEvent(input$cancel, {
     
@@ -398,6 +307,9 @@ server <- shinyServer(function(input, output, session) {
     }
   })
   
+  
+  # -------------------------------------------------------------------------
+  
   output$room_status <- renderUI({
     req(credentials()$user_auth)
     fluidPage(box(width = 3,
@@ -445,61 +357,7 @@ server <- shinyServer(function(input, output, session) {
               ))
   })
   
-  output$room_booking <- renderUI({
-    
-    indiv_table <- loadData(database, 'individual_information')
-    
-    req(credentials()$user_auth)
-    fluidRow(box(width = 3,
-                 h4("Find out which room can be booked : "),
-                 wellPanel(
-                   dateInput('date_search',
-                             label = 'Date',
-                             value = Sys.Date()) %>%
-                     helper(colour = "mediumpurple1",
-                            type = "inline",
-                            size = "m",
-                            title = 'Guidance:',
-                            content = c("- You can search for others' room availability here, and make your booking in the next section.",
-                                        "- Please select the date and the approximate time you wish to use other's office, and then press 'Search'.",
-                                        "- If any room satisfys your requirements, it will be shown on the right.")
-                     )),
-                 checkboxGroupInput("checkbox_ampm",
-                                    "Time",
-                                    choices = c("am","pm"),
-                                    selected = ""),
-                 actionButton("search",
-                              "Search",
-                              width = "25%"),
-                 actionButton("reset", "Clear"), 
-                 h4("Confirm rooms of your choice:"),
-                 verbatimTextOutput('cand_bookings'),
-                 verbatimTextOutput('test'),
-                 actionButton("book",
-                              "Book",
-                              width = "25%") %>%
-                   helper(
-                     colour = "mediumpurple1",
-                     type = "inline",
-                     size = "m",
-                     title = '"How to select the time slot?',
-                     content = c(
-                       "- Please click on the cells within the data table on the right.",
-                       "- Corresponding room information would appear in the box below.",
-                       "- You may then confirm your booking, but notice that 'Booked' or 'Unavailable' rooms cannot be booked"
-                     )
-                   ),
-                 tags$head(
-                   tags$style(
-                     HTML(".shiny-notification {position:fixed;top: calc(50%);left: calc(50%);}"
-                     )
-                   )
-                 )
-    ),
-    box(width = 9,
-        dataTableOutput(outputId = 'all'))
-    )
-  })
+  searchAvailRoomServer("room_booking", credentials, user_data)
   
   output$room_booked <- renderUI({
     req(credentials()$user_auth)
