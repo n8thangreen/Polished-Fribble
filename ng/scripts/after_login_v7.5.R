@@ -29,6 +29,8 @@ source("../R/helper_fns.R")
 
 # modules
 source("../R/searchAvailRoom.R")
+source("../R/updateMyRoomStatus.R")
+source("../R/cancelBooking.R")
 
 
 # database source ----
@@ -67,9 +69,9 @@ body <- dashboardBody(
   ),
   shinyauthr::loginUI("login"),
   tabItems(
-    tabItem(tabName = "Room_status_update", uiOutput("room_status")),
+    tabItem(tabName = "Room_status_update", updateMyRoomStatusUI("room_status")),
     tabItem(tabName = "Room_booking", searchAvailRoomUI("room_booking")),
-    tabItem(tabName = "Room_booked", uiOutput("room_booked"))
+    tabItem(tabName = "Room_booked", cancelBookingUI("cancel"))
   ),
   
   # actionButton("change_schedule", "Click Me to Adjust Schedule")
@@ -151,7 +153,7 @@ server <- shinyServer(function(input, output, session) {
                             sodium_hashed = FALSE,
                             log_out = reactive(logout_init()))
   observe({
-    if(credentials()$user_auth) {
+    if (credentials()$user_auth) {
       shinyjs::removeClass(selector = "body", class = "sidebar-collapse")
     } else {
       shinyjs::addClass(selector = "body", class = "sidebar-collapse")
@@ -169,224 +171,33 @@ server <- shinyServer(function(input, output, session) {
   next_wk <- dates_in_next_wk() # previously 'a'
   
   # diagram displaying current status of personal room information of user  
-  output$personal <- DT::renderDataTable({
-    req(credentials()$user_auth)
-    room_table <- loadData(database, 'new_room_status')
-    
-    my_room_no <- indiv_table$RoomNumber[indiv_table$UserName == user_data()$ID]  ##TODO: remove duplication of this line
-    room_table[room_table$Room_no == my_room_no & 
-                 !is_past(room_table$Date), ]},
-    options = list(scrollX = TRUE)
-  )
+  output$personal <-
+    DT::renderDataTable({
+      req(credentials()$user_auth)
+      room_table <- loadData(database, 'new_room_status')
+      
+      ##TODO: remove duplication of this line
+      my_room_no <-
+        indiv_table$RoomNumber[indiv_table$UserName == user_data()$ID]
+      room_table[room_table$Room_no == my_room_no & 
+                   !is_past(room_table$Date), ]},
+      options = list(scrollX = TRUE))
   
   # diagram displaying all existing booking of user
-  output$cancel <- DT::renderDataTable({
-    booked_table <- loadData(database, "room_booked")
-    booked_table$day <- date_to_weekday(booked_table$date)
-    booked_table[booked_table$booker == user_data()$ID &
-                   !is_past(booked_table$date), ]
-  })
+  output$cancel <-
+    DT::renderDataTable({
+      booked_table <- loadData(database, "room_booked")
+      booked_table$day <- date_to_weekday(booked_table$date)
+      booked_table[booked_table$booker == user_data()$ID &
+                     !is_past(booked_table$date), ]
+    })
   
-  ## 1. save Updated Room information   
-  
-  observeEvent(input$save_room, {   
-    
-    date_update <- input$date_update
-    
-    lup_time <- c(am = "am", pm = "pm", ampm = "both", "neither")
-    
-    available_time1 <- paste(input$time1, collapse = "")
-    am <- unname(lup_time[available_time1])
-    
-    room_table <- loadData(database, 'new_room_status')
-    
-    my_room_no <- indiv_table$RoomNumber[indiv_table$UserName == user_data()$ID]
-    
-    # If a room has been booked by some else (after user first updating their information)
-    # The user cannot change the room status again,
-    # and a notification is shown for asking him to contact admin
-    
-    # examine if the row user wants to update exists in the table
-    # if exists, checks if any time has been booked and then decide to update
-    # if doesn't exist, row is updated directly without checking
-    
-    rows_existing <- room_table$Room_no == my_room_no & room_table$Date == date_update
-    is_existing_record <-  any(rows_existing)
-    is_already_booked <- any(as.matrix(room_table[rows_existing, ] == "Booked"))
-    
-    ##TODO: simplify these ifs...duplication
-    
-    if (!is_existing_record) {
-      
-      update_status(use = "write",
-                    room_no = my_room_no,
-                    date = date_update,
-                    am = am,
-                    database = database,
-                    table = 'new_room_status')
-    } else {
-      if (is_already_booked) {
-        
-        showNotification("Someone has booked your room already. Please contact admin.",
-                         type = "error",
-                         duration = 30,
-                         closeButton = TRUE)
-      } else {
-        update_status(use = "write",
-                      room_no = my_room_no,
-                      date = date_update,
-                      am = am,
-                      database = database,
-                      table = 'new_room_status')}
-    }
-    
-    output$personal <- DT::renderDataTable(
-      {
-        req(credentials()$user_auth)
-        room_table = loadData(database, 'new_room_status')
-        room_table = room_table[room_table$Room_no == my_room_no &
-                                  !is_past(room_table$Date), ]
-        room_table},
-      options = list(scrollX = TRUE)
-    )
-  })
-    
-  ## 4. cancel the room booking
-  observeEvent(input$cancel, {
-    
-    booked_table <- loadData(database, "room_booked")
-    room_table <- loadData(database, 'new_room_status')
-    
-    date_update <- input$date_update
-    
-    if (input$booking_no %in% booked_table$booking_no) {
-      
-      delete_info <- booked_table[booked_table$booking_no == input$booking_no, ]
-      
-      avail <- room_table %>% 
-        filter(Date == delete_info$date,
-               Room_no == delete_info$room_no)
-      
-      avail[1, delete_info$time] <- "Available"
-      
-      my_room_no <- indiv_table$RoomNumber[indiv_table$UserName == user_data()$ID]
-      
-      delete_booking(input$booking_no,
-                     database = database,
-                     table = "room_booked")
-      
-      update_status(use = "booking",
-                    room_no = my_room_no,
-                    date = date_update,
-                    avail = avail,
-                    database = database,
-                    table = "new_room_status" )
-      
-      output$cancel <- DT::renderDataTable({
-        req(credentials()$user_auth)
-        booked_table <- loadData(database, "room_booked")
-        booked_table$day <- date_to_weekday(booked_table$date)
-        booked_table[booked_table$booker == user_data()$ID, ]
-      })
-      
-      current <- weekdays(as.POSIXct(Sys.Date()), abbreviate = FALSE)
-      
-      cancel_confirm_msg <- sprintf("You have successfully canceled the booked room %s \n (%s,%s,",
-                                    paste(input$time4, collapse = ' and '), ")",
-                                    input$room_book_no2, current, input$day4)
-      
-      showNotification(cancel_confirm_msg,
-                       type = "message",
-                       duration = 30,
-                       closeButton = TRUE)
-    } else {
-      showNotification(paste("Your booking reference number does not exist, recheck it please"),
-                       type = "message",
-                       duration = 30,
-                       closeButton = TRUE)
-    }
-  })
-  
-  
-  # -------------------------------------------------------------------------
-  
-  output$room_status <- renderUI({
-    req(credentials()$user_auth)
-    fluidPage(box(width = 3,
-                  h4("Tell others when your room will be available for booking now"),
-                  wellPanel(
-                    dateInput('date_update',
-                              label = 'Date',
-                              value = Sys.Date()) %>%
-                      helper(colour = "mediumpurple1",
-                             type = "inline",
-                             size = "m",
-                             title = "Guidance:",
-                             content = c(
-                               "- Input the date on which your rooms will be available for booking",
-                               "- Then specify the exact period of the day: am, pm, both of them.",
-                               "- After saving your chosen time slots, it would be shown on the righthand side.",
-                               "- You may always modify your available time slots, so long as it isn't booked by someone else",
-                               "- If you input nothing in this table, your room would not appear in any search result (unavailable by default)"))),
-                  
-                  checkboxGroupInput("time1",
-                                     "Time",
-                                     choices = c("am","pm"),
-                                     selected = ""),
-                  actionButton("save_room",
-                               "Save",
-                               width = "25%")),
-              box(width = 9,
-                  dataTableOutput(outputId = 'personal')) %>%
-                helper(
-                  colour = "mediumpurple1",
-                  type = "inline",
-                  size = "m",
-                  content = c("Explaination about cells: ",
-                              "  ",
-                              "Available  : Your room can be booked for this time slot",
-                              "Unavailable: Your room cannot be booked for this time slot",
-                              "Booked     : Others have booked your room for this time slot, you can no longer make changes on this day",
-                              " ",
-                              "To check for the availability of others' rooms and make bookings, please go to Room Booking")
-                ),
-              tags$head(
-                tags$style(
-                  HTML(".shiny-notification {position:fixed;top: calc(50%);left: calc(50%);}")
-                )
-              ))
-  })
-  
+  updateMyRoomStatusServer("room_status", credentials, user_data)
   searchAvailRoomServer("room_booking", credentials, user_data)
-  
-  output$room_booked <- renderUI({
-    req(credentials()$user_auth)
-    fluidPage(box(width = 3,
-                  h4("Cancel the booked room"),
-                  textInput("booking_no","Input booking number here:", value = "") %>%
-                    helper(
-                      colour = "mediumpurple1",
-                      type = "inline",
-                      size = "m",
-                      title = 'Guidance:',
-                      content = c("Inseroom_table the booking number to the room that you no longer need")),
-                  actionButton("cancel",
-                               "Cancel Booking",
-                               width = "50%"),
-                  tags$head(
-                    tags$style(
-                      HTML(".shiny-notification {position:fixed;top: calc(50%);left: calc(50%);}"
-                      )
-                    )
-                  )
-    ),
-    box(width = 9,
-        dataTableOutput(outputId = 'cancel'))
-    )
-  })
+  cancelBookingServer("cancel", credentials, user_data)
 })
 
-# Run the application 
+# Run application 
 shinyApp(ui = ui, server = server)
 # runApp("after_login_v7.5.R", display.mode = "showcase")
 

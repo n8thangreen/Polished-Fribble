@@ -56,12 +56,13 @@ create_candidate_table <- function(input,
   candidate <- NULL
   
   for (i in seq_along(num_dates)) {
-    candidate <- rbind(candidate,
-                       room_table[
-                         interval_avail[i, ] &
-                           room_table$Date == as.character(booking_cand[[i]]$Date) &
-                           room_table$Room_no != my_room_no &
-                           room_table$Room_no == booking_cand[[i]]$Room_no, ])
+    candidate <-
+      rbind(candidate,
+            room_table[
+              interval_avail[i, ] &
+                room_table$Date == as.character(booking_cand[[i]]$Date) &
+                room_table$Room_no != my_room_no &
+                room_table$Room_no == booking_cand[[i]]$Room_no, ])
   }
   
   # change status to booked

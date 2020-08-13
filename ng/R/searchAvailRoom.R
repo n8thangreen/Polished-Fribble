@@ -132,11 +132,12 @@ searchAvailRoomServer <- function(id, credentials, user_data) {
               
             } else if (nrow(candidate) == 0) {
               if (nrow(input$all_cells_selected) > 1) {
-                showNotification("No room is available for all time slots of your choice.
+                showNotification(
+                  "No room is available for all time slots of your choice.
                          Try selecting fewer time slots at a time.",
-                                 type = "warning",
-                                 closeButton = TRUE,
-                                 duration = 30)
+                  type = "warning",
+                  closeButton = TRUE,
+                  duration = 30)
                 
               } else if (nrow(input$all_cells_selected) == 1) {
                 
@@ -148,6 +149,8 @@ searchAvailRoomServer <- function(id, credentials, user_data) {
               room_no_to_book <- candidate$Room_no
               dates_to_book <- candidate$Date
               times_to_book <- time_lup(input$all_cells_selected)
+              
+              candidate <- select(candidate, -Room_no, -Date, -Weekday)
               
               # change from Available -> Booked
               update_status(use = "booking",
@@ -171,7 +174,7 @@ searchAvailRoomServer <- function(id, credentials, user_data) {
                                type = "message",
                                duration = 30,
                                closeButton = TRUE)
-              
+
               # update the booking information displayed
               output$cancel <-
                 DT::renderDataTable({

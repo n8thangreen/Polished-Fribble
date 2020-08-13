@@ -51,7 +51,6 @@ update_booking <- function(room_no,
                            booking_no = NA,
                            database,
                            table){
-  
   db <- dbConnect(drv,
                   dbname = database,
                   host = options()$edwinyu$host, 
@@ -82,7 +81,7 @@ update_booking <- function(room_no,
   
   # parse to query
   q <- 
-    as_tibble(q) %>%
+    as_tibble(q, .name_repair = "minimal") %>%
     set_names(nm = c("booking_no", "date", "room_no", "booker", "time")) %>% 
     select(booking_no, date, time, room_no, booker) %>% # put in correct order
     mutate_at(vars(2:4), funs(paste0("'", ., "'"))) %>% 
@@ -92,24 +91,25 @@ update_booking <- function(room_no,
     select(q) %>% 
     unlist()
   
-  ## MySQL  
-  # query <- paste(
-  #   sprintf(
-  #   "INSERT INTO %s VALUES ('%s')",
-  #   table, 
-  #   paste(values, collapse = "', '")),
-  #   "ON DUPLICATE KEY UPDATE",
-  #   paste(sprintf("%1$s = VALUES(%1$s)", value_names), collapse = ", ")
-  # )
-  
-  ## SQLite
+  if (class(drv) == "MySQLDriver") {
   query <- paste(
-    paste0(
-      sprintf(
-        "INSERT INTO %s VALUES ('%s')", table, q),
-      " ON CONFLICT (date, time, room_no) DO UPDATE SET ",
-      paste(sprintf("'%1$s' = excluded.'%1$s'", value_names), collapse = ", "), ";"),
-    collapse = " ")
+    sprintf(
+    "INSERT INTO %s VALUES ('%s')",
+    table,
+    paste(values, collapse = "', '")),
+    "ON DUPLICATE KEY UPDATE",
+    paste(sprintf("%1$s = VALUES(%1$s)", value_names), collapse = ", "))
+  
+  } else if (class(drv) == "SQLiteDriver") {
+
+    query <- paste(
+      paste0(
+        sprintf(
+          "INSERT INTO %s VALUES ('%s')", table, q),
+        " ON CONFLICT (date, time, room_no) DO UPDATE SET ",
+        paste(sprintf("'%1$s' = excluded.'%1$s'", value_names), collapse = ", "), ";"),
+      collapse = " ")
+  }
   
   dbGetQuery(db, query)
 }
@@ -144,8 +144,10 @@ new_booking_no <- function(booking_no,
   if (!is.na(booking_no)) return(booking_no)
   
   max_booking_no <-
-    dbGetQuery(db,
-               sprintf("SELECT MAX(booking_no) FROM %s WHERE typeof(booking_no) = 'integer'", table)) %>% 
+    dbGetQuery(
+      db,
+      sprintf("SELECT MAX(booking_no) FROM %s WHERE typeof(booking_no) = 'integer'",
+              table)) %>% 
     unlist()
   
   if (length(max_booking_no) == 0 | is.na(max_booking_no))
