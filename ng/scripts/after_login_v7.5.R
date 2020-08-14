@@ -111,7 +111,7 @@ header <-  dashboardHeader(
   tags$li(class = "dropdown",
           tags$a(icon("github"), 
                  href = "https://github.com/paulc91/shinyauthr",
-                 title = "See the code on github")))
+                 title = "See the code on GitHub")))
 
 # -------------------------------------------------------------------------
 
@@ -136,7 +136,7 @@ server <- shinyServer(function(input, output, session) {
                             active = reactive(credentials()$user_auth))
   ##TODO: can we replace above?
   # logout_init <- moduleServer(id = "logout",
-  #                             module = function(input, output, session) {
+  #                             function(input, output, session) {
   #                               active <- reactive(credentials()$user_auth)
   #                               shinyauthr::logout(input, output, session, active)
   #                             })
@@ -147,7 +147,8 @@ server <- shinyServer(function(input, output, session) {
     data.frame(
       ID = indiv_table$UserName,
       Password = indiv_table$Password,
-      Password_Hash = sapply(indiv_table$Password, sodium::password_store),
+      Password_Hash = sapply(indiv_table$Password,
+                             sodium::password_store),
       Permissions = indiv_table$Permissions)
   
   credentials <- callModule(shinyauthr::login,
@@ -157,17 +158,17 @@ server <- shinyServer(function(input, output, session) {
                             pwd_col = Password,
                             sodium_hashed = FALSE,
                             log_out = reactive(logout_init()))
+  
   observe({
     if (credentials()$user_auth) {
-      shinyjs::removeClass(selector = "body", class = "sidebar-collapse")
+      shinyjs::removeClass(selector = "body",
+                           class = "sidebar-collapse")
     } else {
-      shinyjs::addClass(selector = "body", class = "sidebar-collapse")
+      shinyjs::addClass(selector = "body",
+                        class = "sidebar-collapse")
     }
   })
   
-  user_info <- reactive({credentials()$info})
-  
-  ##TODO: why is this duplicated?...
   # pull out user information from login module
   user_data <- reactive({credentials()$info})
   

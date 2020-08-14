@@ -26,7 +26,7 @@ searchAvailRoomServer <- function(id, credentials, user_data) {
         req(credentials()$user_auth)
         
         fluidRow(box(width = 3,
-                     h4("Find out which room can be booked : "),
+                     h4("Find out which room can be booked: "),
                      wellPanel(
                        dateInput(ns("date_search"),
                                  label = 'Date',
@@ -53,7 +53,6 @@ searchAvailRoomServer <- function(id, credentials, user_data) {
                      h4("Confirm rooms of your choice:"),
                      
                      verbatimTextOutput(ns("cand_bookings")),
-                     verbatimTextOutput('test'),             ##TODO: what does this do??
                      
                      actionButton(ns("book"),
                                   "Book",
@@ -90,7 +89,7 @@ searchAvailRoomServer <- function(id, credentials, user_data) {
             req(input$date_search)
             table_shown <- tableShown(input$checkbox_ampm,
                                       input$date_search,
-                                      user_data()$ID)  ##TODO: what the difference between user_data and credentials?
+                                      user_data()$ID)
             
             output$all <-
               DT::renderDataTable({
@@ -110,12 +109,10 @@ searchAvailRoomServer <- function(id, credentials, user_data) {
                   row_id <- input$all_cells_selected[, 1]
                   col_id <- input$all_cells_selected[, 2]
                   
-                  booking_candidate <-
-                    data.frame(date = table_shown[row_id, "Date"],
-                               day = table_shown[row_id, "Weekday"],
-                               room_no = table_shown[row_id, "Room_no"],
-                               time = colnames(table_shown)[col_id])
-                  booking_candidate
+                  data.frame(date = table_shown[row_id, "Date"],
+                             day = table_shown[row_id, "Weekday"],
+                             room_no = table_shown[row_id, "Room_no"],
+                             time = colnames(table_shown)[col_id])
                 }
               })
           } else if (length(input$book) > 0 && input$book == counter_book + 1) {
