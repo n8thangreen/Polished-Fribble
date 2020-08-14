@@ -31,6 +31,7 @@ source("../R/helper_fns.R")
 source("../R/searchAvailRoom.R")
 source("../R/updateMyRoomStatus.R")
 source("../R/cancelBooking.R")
+source("../R/help_tab.R")
 
 
 # database source ----
@@ -71,7 +72,8 @@ body <- dashboardBody(
   tabItems(
     tabItem(tabName = "Room_status_update", updateMyRoomStatusUI("room_status")),
     tabItem(tabName = "Room_booking", searchAvailRoomUI("room_booking")),
-    tabItem(tabName = "Room_booked", cancelBookingUI("cancel"))
+    tabItem(tabName = "Room_booked", cancelBookingUI("cancel")),
+    tabItem(tabName = "Help", helpUI("help"))
   ),
   
   # actionButton("change_schedule", "Click Me to Adjust Schedule")
@@ -91,14 +93,17 @@ sidebar <- dashboardSidebar(
                        icon = icon('table')), 
               menuItem(text = "My Booked Room",
                        tabName = 'Room_booked',
-                       icon = icon('table'))
+                       icon = icon('table')),
+              menuItem(text = "Help",
+                       tabName = 'Help',
+                       icon = icon('info'))
   )
 )
 
 # -------------------------------------------------------------------------
 
 header <-  dashboardHeader(
-  title = "Welcome to Polished Fribble",
+  title = "Welcome to Polished Fribble (Beta)",
   titleWidth = 450,
   tags$li(class = "dropdown",
           style = "padding: 8px;",
@@ -195,6 +200,7 @@ server <- shinyServer(function(input, output, session) {
   updateMyRoomStatusServer("room_status", credentials, user_data)
   searchAvailRoomServer("room_booking", credentials, user_data)
   cancelBookingServer("cancel", credentials, user_data)
+  helpServer("help", credentials)
 })
 
 # Run application 

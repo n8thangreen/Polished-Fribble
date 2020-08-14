@@ -29,7 +29,7 @@ updateMyRoomStatusServer <- function(id, credentials, user_data) {
         
         fluidPage(
           box(width = 3,
-              h4("Tell others when your room will be available for booking now"),
+              h4("Tell others when your room will be available for booking."),
               wellPanel(
                 dateInput(ns('date_update'),
                           label = 'Date',
@@ -49,24 +49,24 @@ updateMyRoomStatusServer <- function(id, credentials, user_data) {
                            your room would not appear in any search result
                            (unavailable by default)"))),
               
-              checkboxGroupInput(ns("time1"),
+              checkboxGroupInput(ns("time"),
                                  "Time",
                                  choices = c("am","pm"),
                                  selected = ""),
               actionButton(ns("save_room"),
-                           "Save",
+                           "Save/Refresh",
                            width = "25%")),
           box(width = 9,
-              dataTableOutput(outputId = ns('personal'))) %>%
+              dataTableOutput(outputId = ns('personal_table'))) %>%
             helper(
               colour = "mediumpurple1",
               type = "inline",
               size = "m",
-              content = c("Explaination about cells: ",
+              content = c("Explanation about cells: ",
                           "  ",
-                          "Available  : Your room can be booked for this time slot",
-                          "Unavailable: Your room cannot be booked for this time slot",
-                          "Booked     : Others have booked your room for this time slot,
+                          "Available   : Your room can be booked for this time slot",
+                          "Unavailable : Your room cannot be booked for this time slot",
+                          "Booked      : Others have booked your room for this time slot,
                           you can no longer make changes on this day",
                           " ",
                           "To check for the availability of others' rooms and make bookings,
@@ -82,21 +82,24 @@ updateMyRoomStatusServer <- function(id, credentials, user_data) {
         observeEvent(input$save_room, {   
           
           date_update <- input$date_update
+          avail_time <- paste(input$time, collapse = "")
           
-          lup_time <- c(am = "am",
-                        pm = "pm",
-                        ampm = "both",
-                        "neither")
-          
-          available_time1 <- paste(input$time1, collapse = "")
-          am <- unname(lup_time[available_time1])
+          ampm <- 
+            switch(avail_time,
+                   am = "am",
+                   pm = "pm",
+                   ampm = "both",
+                   "neither")
           
           room_table <- loadData(database, 'new_room_status')
           indiv_table <- loadData(database, 'individual_information')
           
           my_room_no <- indiv_table$RoomNumber[indiv_table$UserName == user_data()$ID]
           
-          rows_existing <- room_table$Room_no == my_room_no & room_table$Date == date_update
+          rows_existing <-
+            (room_table$Room_no == my_room_no) &&
+            (room_table$Date == date_update)
+          
           is_existing_record <-  any(rows_existing)
           is_already_booked <- any(as.matrix(room_table[rows_existing, ] == "Booked"))
           
@@ -107,13 +110,14 @@ updateMyRoomStatusServer <- function(id, credentials, user_data) {
             update_status(use = "write",
                           room_no = my_room_no,
                           date = date_update,
-                          am = am,
+                          am = ampm,
                           database = database,
                           table = 'new_room_status')
           } else {
             if (is_already_booked) {
               
-              showNotification("Someone has booked your room already. Please contact admin.",
+              showNotification("Someone has booked your room already.
+                               Please contact admin.",
                                type = "error",
                                duration = 30,
                                closeButton = TRUE)
@@ -121,19 +125,20 @@ updateMyRoomStatusServer <- function(id, credentials, user_data) {
               update_status(use = "write",
                             room_no = my_room_no,
                             date = date_update,
-                            am = am,
+                            am = ampm,
                             database = database,
                             table = 'new_room_status')}
           }
           
-          output$personal <- DT::renderDataTable({
+          output$personal_table <-
+            DT::renderDataTable({
               req(credentials()$user_auth)
-              room_table = loadData(database, 'new_room_status')
-              room_table = room_table[room_table$Room_no == my_room_no &
-                                        !is_past(room_table$Date), ]
-              room_table},
+              room_table <- loadData(database, 'new_room_status')
+              room_table[room_table$Room_no == my_room_no &
+                           !is_past(room_table$Date), ]
+            },
             options = list(scrollX = TRUE)
-          )
+            )
         })
       )
     }

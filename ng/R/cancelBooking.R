@@ -32,10 +32,7 @@ cancelBookingServer <- function(id, credentials, user_data) {
                   title = 'Guidance:',
                   content = c("Enter the booking number to the room that you no longer need.")),
               actionButton(ns("cancel"),
-                           "Cancel Booking",
-                           width = "50%"),
-              actionButton(ns("refresh"),
-                           "Refresh Table",
+                           "Cancel/Refresh",
                            width = "50%"),
               tags$head(
                 tags$style(

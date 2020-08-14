@@ -48,9 +48,8 @@ searchAvailRoomServer <- function(id, credentials, user_data) {
                                         choices = c("am","pm"),
                                         selected = ""),
                      actionButton(ns("search"),
-                                  "Search",
-                                  width = "25%"),
-                     actionButton(ns("reset"), "Clear"), 
+                                  "Search/Refresh",
+                                  width = "50%"),
                      h4("Confirm rooms of your choice:"),
                      
                      verbatimTextOutput(ns("cand_bookings")),
