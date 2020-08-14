@@ -76,7 +76,6 @@ body <- dashboardBody(
     tabItem(tabName = "Help", helpUI("help"))
   ),
   
-  # actionButton("change_schedule", "Click Me to Adjust Schedule")
   HTML('<div data-iframe-height></div>')
 )
 
@@ -130,19 +129,9 @@ server <- shinyServer(function(input, output, session) {
   
   indiv_table <- loadData(database, 'individual_information')
   
-  # call the logout module with reactive trigger to hide/show
   logout_init <- callModule(module = shinyauthr::logout, 
                             id = "logout", 
                             active = reactive(credentials()$user_auth))
-  ##TODO: can we replace above?
-  # logout_init <- moduleServer(id = "logout",
-  #                             function(input, output, session) {
-  #                               active <- reactive(credentials()$user_auth)
-  #                               shinyauthr::logout(input, output, session, active)
-  #                             })
-  
-  # call login module supplying data frame, user and password cols
-  # and reactive trigger
   login_info <-
     data.frame(
       ID = indiv_table$UserName,
@@ -169,27 +158,21 @@ server <- shinyServer(function(input, output, session) {
     }
   })
   
-  # pull out user information from login module
   user_data <- reactive({credentials()$info})
-  
   time <- Sys.time()
+  next_wk <- dates_in_next_wk()
   
-  next_wk <- dates_in_next_wk() # previously 'a'
-  
-  # diagram displaying current status of personal room information of user  
   output$personal <-
     DT::renderDataTable({
       req(credentials()$user_auth)
       room_table <- loadData(database, 'new_room_status')
       
-      ##TODO: remove duplication of this line
       my_room_no <-
         indiv_table$RoomNumber[indiv_table$UserName == user_data()$ID]
       room_table[room_table$Room_no == my_room_no & 
                    !is_past(room_table$Date), ]},
       options = list(scrollX = TRUE))
   
-  # diagram displaying all existing booking of user
   output$cancel <-
     DT::renderDataTable({
       booked_table <- loadData(database, "room_booked")
@@ -204,7 +187,7 @@ server <- shinyServer(function(input, output, session) {
   helpServer("help", credentials)
 })
 
-# Run application 
+# run application 
 shinyApp(ui = ui, server = server)
 # runApp("after_login_v7.5.R", display.mode = "showcase")
 
