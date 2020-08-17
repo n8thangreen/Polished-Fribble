@@ -7,7 +7,7 @@ cancelBookingUI <- function(id) {
 }
 
 #
-cancelBookingServer <- function(id, credentials, user_data) {
+cancelBookingServer <- function(id, credentials) {
   
   moduleServer(
     id,
@@ -18,7 +18,7 @@ cancelBookingServer <- function(id, credentials, user_data) {
         ns <- session$ns
         
         req(credentials()$user_auth)
-        
+
         fluidPage(
           box(width = 3,
               h4("Cancel the booked room"),
@@ -45,14 +45,14 @@ cancelBookingServer <- function(id, credentials, user_data) {
         )
       })
       
-      
       return(
         observeEvent(input$cancel, {
+          
+          user_data <- reactive({credentials()$info})
           
           booked_table <- loadData(database, "room_booked")
           room_table <- loadData(database, 'new_room_status')
           indiv_table <- loadData(database, 'individual_information')
-          
           
           if (length(input$booking_no) > 0 &&
               input$booking_no %in% booked_table$booking_no) {
@@ -90,7 +90,12 @@ cancelBookingServer <- function(id, credentials, user_data) {
               sprintf("You have successfully canceled the booked room %s \n (%s,%s,",
                       paste(input$time4, collapse = ' and '), ")",
                       input$room_book_no2, current, input$day4)
-            
+
+            ##TODO: finish/test this...            
+            # sprintf("You have successfully canceled the booked room %s \n (%s,%s,%s)",
+            #         paste(delete_info$times, collapse = ' and '),
+            #         delete_info$room_no, delete_info$day, delete_info$date)
+
             showNotification(cancel_confirm_msg,
                              type = "message",
                              duration = 30,
@@ -102,6 +107,7 @@ cancelBookingServer <- function(id, credentials, user_data) {
               duration = 30,
               closeButton = TRUE)
           }
+          
           my_booked_table <-
             booked_table[booked_table$booker == user_data()$ID, ]
           

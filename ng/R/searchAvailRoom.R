@@ -8,7 +8,7 @@ searchAvailRoomUI <- function(id) {
 
 
 #
-searchAvailRoomServer <- function(id, credentials, user_data) {
+searchAvailRoomServer <- function(id, credentials) {
   
   counter_search <<- 0
   counter_book <<- 0
@@ -21,9 +21,9 @@ searchAvailRoomServer <- function(id, credentials, user_data) {
         
         ns <- session$ns
         
-        indiv_table <- loadData(database, 'individual_information')
-        
         req(credentials()$user_auth)
+        
+        indiv_table <- loadData(database, 'individual_information')
         
         fluidRow(box(width = 3,
                      h4("Find out which room can be booked: "),
@@ -66,7 +66,7 @@ searchAvailRoomServer <- function(id, credentials, user_data) {
                            "- Please click on the cells within the data table on the right.",
                            "- Corresponding room information would appear in the box below.",
                            "- You may then confirm your booking, but notice that 'Booked' or
-                       'Unavailable' rooms cannot be booked")
+                       'Unavailable' rooms cannot be booked.")
                        ),
                      tags$head(
                        tags$style(
@@ -75,39 +75,41 @@ searchAvailRoomServer <- function(id, credentials, user_data) {
                      )
         ),
         box(width = 9,
-            dataTableOutput(outputId = ns("all")))
+            dataTableOutput(outputId = ns("all_table")))
         )
       })
       
       return(
         observeEvent(input$search | input$book, {
           
+          user_data <- reactive({credentials()$info})
+          
           if (length(input$search) > 0 && input$search == counter_search + 1) {
             
             counter_search <<- input$search
             
+            req(credentials()$user_auth)
             req(input$date_search)
+            
             table_shown <- tableShown(input$checkbox_ampm,
                                       input$date_search,
                                       user_data()$ID)
             
-            output$all <-
-              DT::renderDataTable({
-                req(credentials()$user_auth)
-                table_shown},
-                selection = list(mode = "multiple",  # pick date-time cells
-                                 target = "cell"),
-                options = list(scrollX = TRUE))
+            output$all_table <-
+              DT::renderDataTable(table_shown,
+                                  selection = list(mode = "multiple",  # pick date-time cells
+                                                   target = "cell"),
+                                  options = list(scrollX = TRUE))
             
             output$cand_bookings <-
               renderPrint({
-                req(input$all_cells_selected) 
+                req(input$all_table_cells_selected)
                 
-                if (nrow(input$all_cells_selected) == 0) {
+                if (nrow(input$all_table_cells_selected) == 0) {
                   cat('Please select the rooms')
                 } else { 
-                  row_id <- input$all_cells_selected[, 1]
-                  col_id <- input$all_cells_selected[, 2]
+                  row_id <- input$all_table_cells_selected[, 1]
+                  col_id <- input$all_table_cells_selected[, 2]
                   
                   data.frame(date = table_shown[row_id, "Date"],
                              day = table_shown[row_id, "Weekday"],
@@ -116,35 +118,36 @@ searchAvailRoomServer <- function(id, credentials, user_data) {
                 }
               })
           } else if (length(input$book) > 0 && input$book == counter_book + 1) {
-            counter_book <<- input$book
             
+            counter_book <<- input$book
             candidate <- create_candidate_table(input, user_data()$ID)
+            notif_duration <- 30
             
             if (is.null(candidate)) {
               showNotification("Please make a selection",
                                type = "warning",
                                closeButton = TRUE,
-                               duration = 30)
+                               duration = notif_duration)
               
             } else if (nrow(candidate) == 0) {
-              if (nrow(input$all_cells_selected) > 1) {
+              if (nrow(input$all_table_cells_selected) > 1) {
                 showNotification(
                   "No room is available for all time slots of your choice.
                          Try selecting fewer time slots at a time.",
                   type = "warning",
                   closeButton = TRUE,
-                  duration = 30)
+                  duration = notif_duration)
                 
-              } else if (nrow(input$all_cells_selected) == 1) {
+              } else if (nrow(input$all_table_cells_selected) == 1) {
                 
                 showNotification("No room is available for this time slot so far.",
                                  type = "warning",
                                  closeButton = TRUE,
-                                 duration = 30)}
+                                 duration = notif_duration)}
             } else {
               room_no_to_book <- candidate$Room_no
               dates_to_book <- candidate$Date
-              times_to_book <- time_lup(input$all_cells_selected)
+              times_to_book <- time_lup(input$all_table_cells_selected)
               
               candidate <- select(candidate, -Room_no, -Date, -Weekday)
               
@@ -159,7 +162,7 @@ searchAvailRoomServer <- function(id, credentials, user_data) {
               update_booking(room_no = room_no_to_book,
                              booker = user_data()$ID,
                              date = dates_to_book,
-                             time_idx = input$all_cells_selected,
+                             time_idx = input$all_table_cells_selected,
                              booking_no = NA,
                              database = database,
                              table = "room_booked")
@@ -168,18 +171,8 @@ searchAvailRoomServer <- function(id, credentials, user_data) {
                                                 dates_to_book,
                                                 times_to_book),
                                type = "message",
-                               duration = 30,
-                               closeButton = TRUE)
-
-              # update the booking information displayed
-              output$cancel <-
-                DT::renderDataTable({
-                  req(credentials()$user_auth)
-                  booked_table <- loadData(database, "room_booked")
-                  booked_table$day <- date_to_weekday(booked_table$date)
-                  booked_table[
-                    booked_table$booker == user_data()$ID & !is_past(booked_table$date), ]
-                })
+                               closeButton = TRUE,
+                               duration = notif_duration)
             }
           }
         })

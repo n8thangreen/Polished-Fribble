@@ -15,7 +15,7 @@ updateMyRoomStatusUI <- function(id) {
 # if exists, checks if any time has been booked and then decide to update
 # if doesn't exist, row is updated directly without checking
 #
-updateMyRoomStatusServer <- function(id, credentials, user_data) {
+updateMyRoomStatusServer <- function(id, credentials) {
   
   moduleServer(
     id,
@@ -46,7 +46,7 @@ updateMyRoomStatusServer <- function(id, credentials, user_data) {
                            "- You may always modify your available time slots,
                            so long as it isn't booked by someone else",
                            "- If you input nothing in this table,
-                           your room would not appear in any search result
+                           your room will not appear in any search result
                            (unavailable by default)"))),
               
               checkboxGroupInput(ns("time"),
@@ -62,15 +62,17 @@ updateMyRoomStatusServer <- function(id, credentials, user_data) {
               colour = "mediumpurple1",
               type = "inline",
               size = "m",
-              content = c("Explanation about cells: ",
-                          "  ",
-                          "Available   : Your room can be booked for this time slot",
-                          "Unavailable : Your room cannot be booked for this time slot",
-                          "Booked      : Others have booked your room for this time slot,
-                          you can no longer make changes on this day",
-                          " ",
-                          "To check for the availability of others' rooms and make bookings,
-                          please go to Room Booking")),
+              content = c("Explanation about cells:",
+                          "",
+                          "Available   :", "Your room can be booked for this time slot.",
+                          "",
+                          "Unavailable :", "Your room cannot be booked for this time slot.",
+                          "",
+                          "Booked      :", "Others have booked your room for this time slot.",
+                          "You can no longer make changes on this day.",
+                          "",
+                          "To check for the availability of others' rooms and make bookings",
+                          "please go to Room Booking.")),
           tags$head(
             tags$style(
               HTML(".shiny-notification {position:fixed;top: calc(50%);left: calc(50%);}")
@@ -80,6 +82,9 @@ updateMyRoomStatusServer <- function(id, credentials, user_data) {
       
       return(
         observeEvent(input$save_room, {   
+          
+          req(credentials()$user_auth)
+          user_data <- reactive({credentials()$info})
           
           date_update <- input$date_update
           avail_time <- paste(input$time, collapse = "")
@@ -103,42 +108,28 @@ updateMyRoomStatusServer <- function(id, credentials, user_data) {
           is_existing_record <-  any(rows_existing)
           is_already_booked <- any(as.matrix(room_table[rows_existing, ] == "Booked"))
           
-          ##TODO: simplify these ifs...duplication
-          
-          if (!is_existing_record) {
+          if (is_existing_record && is_already_booked) {
             
+            showNotification("Someone has booked your room already.
+                               Please contact admin.",
+                             type = "error",
+                             duration = 30,
+                             closeButton = TRUE)
+          } else {
             update_status(use = "write",
                           room_no = my_room_no,
                           date = date_update,
                           am = ampm,
                           database = database,
                           table = 'new_room_status')
-          } else {
-            if (is_already_booked) {
-              
-              showNotification("Someone has booked your room already.
-                               Please contact admin.",
-                               type = "error",
-                               duration = 30,
-                               closeButton = TRUE)
-            } else {
-              update_status(use = "write",
-                            room_no = my_room_no,
-                            date = date_update,
-                            am = ampm,
-                            database = database,
-                            table = 'new_room_status')}
           }
           
           output$personal_table <-
             DT::renderDataTable({
-              req(credentials()$user_auth)
               room_table <- loadData(database, 'new_room_status')
               room_table[room_table$Room_no == my_room_no &
-                           !is_past(room_table$Date), ]
-            },
-            options = list(scrollX = TRUE)
-            )
+                           !is_past(room_table$Date), ]},
+              options = list(scrollX = TRUE))
         })
       )
     }

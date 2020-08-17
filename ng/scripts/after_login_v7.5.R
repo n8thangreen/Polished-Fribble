@@ -6,9 +6,9 @@ library(shinyauthr)
 library(shinyjs)
 library(shinyhelper)
 library(shinydashboard)
-library(sodium)         # Hashing Passwords with 'sodium'
+library(sodium)         # hashing Passwords with 'sodium'
 library(jsonlite)
-library(rjson)          # Define json data format for data storage, querying
+library(rjson)          # define json format for data storage, querying
 library(RJSONIO)
 library(DT)
 library(DBI)
@@ -158,32 +158,9 @@ server <- shinyServer(function(input, output, session) {
     }
   })
   
-  user_data <- reactive({credentials()$info})
-  time <- Sys.time()
-  next_wk <- dates_in_next_wk()
-  
-  output$personal <-
-    DT::renderDataTable({
-      req(credentials()$user_auth)
-      room_table <- loadData(database, 'new_room_status')
-      
-      my_room_no <-
-        indiv_table$RoomNumber[indiv_table$UserName == user_data()$ID]
-      room_table[room_table$Room_no == my_room_no & 
-                   !is_past(room_table$Date), ]},
-      options = list(scrollX = TRUE))
-  
-  output$cancel <-
-    DT::renderDataTable({
-      booked_table <- loadData(database, "room_booked")
-      booked_table$day <- date_to_weekday(booked_table$date)
-      booked_table[booked_table$booker == user_data()$ID &
-                     !is_past(booked_table$date), ]
-    })
-  
-  updateMyRoomStatusServer("room_status", credentials, user_data)
-  searchAvailRoomServer("room_booking", credentials, user_data)
-  cancelBookingServer("cancel", credentials, user_data)
+  updateMyRoomStatusServer("room_status", credentials)
+  searchAvailRoomServer("room_booking", credentials)
+  cancelBookingServer("cancel", credentials)
   helpServer("help", credentials)
 })
 
