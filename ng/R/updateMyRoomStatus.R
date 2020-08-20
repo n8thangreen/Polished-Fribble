@@ -86,6 +86,8 @@ updateMyRoomStatusServer <- function(id, credentials) {
           req(credentials()$user_auth)
           user_data <- reactive({credentials()$info})
           
+          print(user_data())
+          
           date_update <- input$date_update
           avail_time <- paste(input$time, collapse = "")
           
@@ -99,13 +101,18 @@ updateMyRoomStatusServer <- function(id, credentials) {
           room_table <- loadData(database, 'new_room_status')
           indiv_table <- loadData(database, 'individual_information')
           
+          print(room_table)
+          print(indiv_table)
+          
           my_room_no <- indiv_table$RoomNumber[indiv_table$UserName == user_data()$ID]
+          
+          print(my_room_no)
           
           rows_existing <-
             (room_table$Room_no == my_room_no) &&
             (room_table$Date == date_update)
           
-          is_existing_record <-  any(rows_existing)
+          is_existing_record <- any(rows_existing)
           is_already_booked <- any(as.matrix(room_table[rows_existing, ] == "Booked"))
           
           if (is_existing_record && is_already_booked) {
