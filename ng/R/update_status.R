@@ -59,7 +59,7 @@ update_status <- function(room_no,
                   "1pm_2pm", "2pm_3pm", "3pm_4pm", "4pm_5pm")
   
   if (use == "write") {
-    
+    print(paste("write"))
     A <-
       tibble(date = date,
              weekday = date_to_weekday(date),
@@ -73,16 +73,13 @@ update_status <- function(room_no,
       ) %>% 
       select(-am)
     
+    print(paste("A:", A))
+    
     q <- parse_query(A)
+    print(paste("q:", q))
     
   } else if (use == "booking") {
-    print(date)
-    print(room_no)
-    print(tibble(date = date,
-                 weekday = date_to_weekday(date),
-                 room_no = room_no)) 
-print(cbind.data.frame(
-              as_tibble(avail, .name_repair = "minimal")) )
+    print(paste("booking"))
     
     A <- tibble(date = date,
                 weekday = date_to_weekday(date),
@@ -92,9 +89,8 @@ print(cbind.data.frame(
       group_by(date, weekday, room_no) %>%
       nest() %>% 
       rename(avail = data)
-print(A)
+    
     q <- parse_query(A)
-    print(q)
   }
   
   table_headings <- c("Weekday", "Room_no", time_slots)
@@ -117,7 +113,8 @@ print(A)
       "ON CONFLICT (Date, Room_no) DO UPDATE SET ",
       paste(sprintf("'%1$s' = excluded.'%1$s'", table_headings), collapse = ", "))
   }
-  print(query)
+
+  print(paste("query:", query))
   sapply(query, FUN = function(x) dbGetQuery(conn = db, x))
   # sapply(query, FUN = function(x) dbExecute(conn = db, x))
 }

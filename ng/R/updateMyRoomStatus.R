@@ -101,20 +101,19 @@ updateMyRoomStatusServer <- function(id, credentials) {
           room_table <- loadData(database, 'new_room_status')
           indiv_table <- loadData(database, 'individual_information')
           
-          print(room_table)
-          print(indiv_table)
-          
-          my_room_no <- indiv_table$RoomNumber[indiv_table$UserName == user_data()$ID]
-          
-          print(my_room_no)
+          my_room_no <-
+            indiv_table$RoomNumber[indiv_table$UserName == user_data()$ID]
           
           rows_existing <-
             (room_table$Room_no == my_room_no) &&
             (room_table$Date == date_update)
           
           is_existing_record <- any(rows_existing)
-          is_already_booked <- any(as.matrix(room_table[rows_existing, ] == "Booked"))
+          print(paste("is_existing_record:", is_existing_record))
           
+          is_already_booked <- any(as.matrix(room_table[rows_existing, ] == "Booked"))
+          print(paste("is_already_booked:", is_already_booked))
+                    
           if (is_existing_record && is_already_booked) {
             
             showNotification("Someone has booked your room already.
@@ -123,6 +122,7 @@ updateMyRoomStatusServer <- function(id, credentials) {
                              duration = 30,
                              closeButton = TRUE)
           } else {
+            print("update_status()")
             update_status(use = "write",
                           room_no = my_room_no,
                           date = date_update,
@@ -131,11 +131,15 @@ updateMyRoomStatusServer <- function(id, credentials) {
                           table = 'new_room_status')
           }
           
+          room_table <- loadData(database, 'new_room_status')
+          personal_table <-
+            room_table[room_table$Room_no == my_room_no &
+                         !is_past(room_table$Date), ]
+          print(paste("personal_table:", personal_table))
+          
           output$personal_table <-
             DT::renderDataTable({
-              room_table <- loadData(database, 'new_room_status')
-              room_table[room_table$Room_no == my_room_no &
-                           !is_past(room_table$Date), ]},
+              personal_table},
               options = list(scrollX = TRUE))
         })
       )
