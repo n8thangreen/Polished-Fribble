@@ -105,15 +105,23 @@ updateMyRoomStatusServer <- function(id, credentials) {
             indiv_table$RoomNumber[indiv_table$UserName == user_data()$ID]
           
           rows_existing <-
-            (room_table$Room_no == my_room_no) &&
+            (room_table$Room_no == my_room_no) &
             (room_table$Date == date_update)
           
           is_existing_record <- any(rows_existing)
           print(paste("is_existing_record:", is_existing_record))
           
-          is_already_booked <- any(as.matrix(room_table[rows_existing, ] == "Booked"))
+          print(paste("rows_existing:", rows_existing))
+          
+          rooms_existing <- room_table[rows_existing, ]
+          print(paste("rooms_existing:", rooms_existing))
+          
+          is_room_booked <- rooms_existing == "Booked"
+          print(paste("is_room_booked:", is_room_booked))
+          
+          is_already_booked <- any(as.matrix(is_room_booked))
           print(paste("is_already_booked:", is_already_booked))
-                    
+          
           if (is_existing_record && is_already_booked) {
             
             showNotification("Someone has booked your room already.
