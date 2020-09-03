@@ -53,7 +53,7 @@ update_status <- function(room_no,
                   port = options()$edwinyu$port,
                   user = options()$edwinyu$user, 
                   password = options()$edwinyu$password)
-  on.exit(dbDisconnect(db))
+  on.exit(dbDisconnect(db), add = TRUE)
   
   time_slots <- c("9am_10am", "10am_11am", "11am_12pm", "12pm_1pm",
                   "1pm_2pm", "2pm_3pm", "3pm_4pm", "4pm_5pm")
