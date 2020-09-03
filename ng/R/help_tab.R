@@ -18,7 +18,7 @@ helpServer <- function(id, credentials) {
         
         ns <- session$ns
         
-        req(credentials$user_auth)
+        # req(credentials$user_auth)
         
         tagList(
           h1("What is Polished Fribble?"),

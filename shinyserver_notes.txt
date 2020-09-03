@@ -45,3 +45,19 @@ source('sruser01-euler.R')
 Hope that it gives some ideas of how Shinyproxy works.
 
 Uploading your code to Egon to make them run within Shinyproxy is not as straight forward as doing Shiny app as your previously did. In the mean time if your code mature to some extents please send me, then I will upload it to you. There are parts that require manually touch and configure.
+
+----
+
+I gathered IT related information for Room Booking project here:
+
+https://hub.stats.ucl.ac.uk/redmine/projects/room-booking/wiki
+
+It requires your UCL ID/password and is only accessible inside college network or under VPN.
+
+Nathan: I just implemented a quicker way to upload the code:
+1. Push your code to repository as normal.
+2. Click on the below link it will download the code to server and to virtual machine's image.
+
+https://egon.stats.ucl.ac.uk/locutils/query/178ea2215bb8d4aff79b57bb0a3f4c8c
+
+3. Resume your testing.

@@ -77,7 +77,7 @@ body <- dashboardBody(
 # -------------------------------------------------------------------------
 
 sidebar <- dashboardSidebar(
-  collapsed = TRUE,
+  collapsed = FALSE,
   sidebarMenu(width = 70,
               menuItem(text = 'Room Status Update',
                        tabName = 'Room_status_update',
@@ -133,13 +133,15 @@ server <- shinyServer(function(input, output, session) {
   helpServer("help", credentials)
 })
 
+# -------------------------------------------------------------------------
+
 Sys.setenv(CREDENTIALS_INFO_ID = "Simon")
 Sys.setenv(CREDENTIALS_AUTH = TRUE)
 # Sys.setenv(SHINYPROXY_USERGROUPS = "shinyroom")
 
-credentials_info_ID <- Sys.getenv("CREDENTIALS_INFO_ID", unset="")
-credentials_auth <- Sys.getenv("CREDENTIALS_AUTH", unset="")
-# shinyproxy_usergroups <- Sys.getenv("SHINYPROXY_USERGROUPS", unset="")
+credentials_info_ID <- Sys.getenv("CREDENTIALS_INFO_ID", unset = "")
+credentials_auth <- Sys.getenv("CREDENTIALS_AUTH", unset = "")
+# shinyproxy_usergroups <- Sys.getenv("SHINYPROXY_USERGROUPS", unset = "")
 
 # run application 
 shinyApp(ui = ui, server = server)

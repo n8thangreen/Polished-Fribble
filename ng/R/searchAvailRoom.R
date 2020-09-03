@@ -21,7 +21,7 @@ searchAvailRoomServer <- function(id, credentials) {
         
         ns <- session$ns
         
-        req(credentials$user_auth)
+        # req(credentials$user_auth)
         
         indiv_table <- loadData(database, 'individual_information')
         
@@ -90,12 +90,12 @@ searchAvailRoomServer <- function(id, credentials) {
             
             counter_search <<- input$search
             
-            req(credentials()$user_auth)
+            # req(credentials()$user_auth)
             req(input$date_search)
             
             table_shown <- tableShown(input$checkbox_ampm,
                                       input$date_search,
-                                      user_data$ID)
+                                      user_data[['ID']])
             
             output$all_table <-
               DT::renderDataTable(table_shown,
@@ -122,7 +122,7 @@ searchAvailRoomServer <- function(id, credentials) {
           } else if (length(input$book) > 0 && input$book == counter_book + 1) {
             
             counter_book <<- input$book
-            candidate <- create_candidate_table(input, user_data$ID)
+            candidate <- create_candidate_table(input, user_data[['ID']])
             notif_duration <- 30
             
             if (is.null(candidate)) {
@@ -162,7 +162,7 @@ searchAvailRoomServer <- function(id, credentials) {
                             table = 'new_room_status')
               
               update_booking(room_no = room_no_to_book,
-                             booker = user_data$ID,
+                             booker = user_data[['ID']],
                              date = dates_to_book,
                              time_idx = input$all_table_cells_selected,
                              booking_no = NA,
