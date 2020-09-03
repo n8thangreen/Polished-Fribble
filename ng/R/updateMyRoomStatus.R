@@ -121,7 +121,13 @@ updateMyRoomStatusServer <- function(id, credentials) {
           print("rooms_existing:\n")
           print(rooms_existing)
           
-          is_room_booked <- rooms_existing == "Booked"
+          print(nrow(rooms_existing))
+          
+          if (nrow(rooms_existing) == 0) {
+            is_room_booked <- FALSE
+          } else {
+            is_room_booked <- rooms_existing == "Booked"
+          }
           print("is_room_booked:\n")
           print(is_room_booked)
           
