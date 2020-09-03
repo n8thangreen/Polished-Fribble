@@ -57,13 +57,6 @@ database <<- "../sql/room_avail.db"
 # file.copy(from = "schema_room_avail.db", to = database, overwrite = TRUE)
 
 body <- dashboardBody(
-  # shinyjs::useShinyjs(),
-  # tags$head(
-  #   tags$style(".table{margin: 0 auto;}"),
-  #   tags$script(src = "https://cdnjs.cloudflare.com/ajax/libs/iframe-resizer/3.5.16/iframeResizer.contentWindow.min.js",
-  #               type = "text/javascript"),
-  #   includeScript("returnClick.js")
-  # ),
   tabItems(
     tabItem(tabName = "Room_status_update", updateMyRoomStatusUI("room_status")),
     tabItem(tabName = "Room_booking", searchAvailRoomUI("room_booking")),
