@@ -57,7 +57,7 @@ updateMyRoomStatusServer <- function(id, credentials) {
                            "Save/Refresh",
                            width = "25%")),
           box(width = 9,
-              dataTableOutput(outputId = ns('personal_table'))) %>%
+              DT::dataTableOutput(outputId = ns('personal_table'))) %>%
             helper(
               colour = "mediumpurple1",
               type = "inline",
@@ -146,13 +146,18 @@ updateMyRoomStatusServer <- function(id, credentials) {
           room_table <- loadData(database, 'new_room_status')
           personal_table <-
             room_table[room_table$Room_no == my_room_no &
-                         !is_past(room_table$Date), ]
+                         !is_past(room_table$Date), ] %>% 
+            arrange(desc(Date))
+          
           print(paste("personal_table:", personal_table))
           
           output$personal_table <-
             DT::renderDataTable({
               personal_table},
-              options = list(scrollX = TRUE))
+              options = list(scrollX = TRUE,
+                             # pageLength = 10
+                             paging = FALSE)
+            )
         })
       )
     }

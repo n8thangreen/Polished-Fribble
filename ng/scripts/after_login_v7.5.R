@@ -30,19 +30,7 @@ source("../R/cancelBooking.R")
 source("../R/help_tab.R")
 
 
-# database source ----
-
-## free server
-# options(edwinyu = list(
-#   "host" = "db4free.net",
-#   "port" = 3306,
-#   "user" = "edwinyu",
-#   "password" = "Edwinyrl2019"
-# ))
-# drv <<- MySQL()
-# database <- "room_avail"
-
-# local
+# database source
 options(edwinyu = list(
   "host" = NULL,
   "port" = 0,
@@ -116,7 +104,7 @@ server <- shinyServer(function(input, output, session) {
   indiv_table <- loadData(database, 'individual_information')
   
   ##TODO:...
-  credentials <- 
+  credentials <-
     list(auth = credentials_auth,
          info = c(ID = credentials_info_ID))
   
