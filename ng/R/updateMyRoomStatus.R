@@ -25,7 +25,7 @@ updateMyRoomStatusServer <- function(id, credentials) {
         
         ns <- session$ns
         
-        req(credentials()$user_auth)
+        # req(credentials()$user_auth)
         
         fluidPage(
           box(width = 3,
@@ -83,13 +83,16 @@ updateMyRoomStatusServer <- function(id, credentials) {
       return(
         observeEvent(input$save_room, {   
           
-          req(credentials()$user_auth)
-          user_data <- reactive({credentials()$info})
+          # req(credentials$user_auth)
+          user_data <- credentials$info
           
-          print(user_data())
+          print(user_data)
           
           date_update <- input$date_update
+          print(paste("date_update", date_update))
+          
           avail_time <- paste(input$time, collapse = "")
+          print(paste("avail_time", avail_time))
           
           ampm <- 
             switch(avail_time,
@@ -102,7 +105,8 @@ updateMyRoomStatusServer <- function(id, credentials) {
           indiv_table <- loadData(database, 'individual_information')
           
           my_room_no <-
-            indiv_table$RoomNumber[indiv_table$UserName == user_data()$ID]
+            indiv_table$RoomNumber[indiv_table$UserName == user_data[['ID']]]
+          print(paste("my_room_no", my_room_no)) 
           
           rows_existing <-
             (room_table$Room_no == my_room_no) &

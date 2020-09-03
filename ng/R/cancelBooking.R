@@ -17,7 +17,7 @@ cancelBookingServer <- function(id, credentials) {
         
         ns <- session$ns
         
-        req(credentials()$user_auth)
+        req(credentials$user_auth)
 
         fluidPage(
           box(width = 3,
@@ -48,7 +48,7 @@ cancelBookingServer <- function(id, credentials) {
       return(
         observeEvent(input$cancel, {
           
-          user_data <- reactive({credentials()$info})
+          user_data <- credentials$info
           
           booked_table <- loadData(database, "room_booked")
           room_table <- loadData(database, 'new_room_status')
@@ -69,7 +69,7 @@ cancelBookingServer <- function(id, credentials) {
             avail[1, delete_info$time] <- "Available"
             
             my_room_no <-
-              indiv_table$RoomNumber[indiv_table$UserName == user_data()$ID]
+              indiv_table$RoomNumber[indiv_table$UserName == user_data$ID]
             
             delete_booking(input$booking_no,
                            database = database,
@@ -109,7 +109,7 @@ cancelBookingServer <- function(id, credentials) {
           }
           
           my_booked_table <-
-            booked_table[booked_table$booker == user_data()$ID, ]
+            booked_table[booked_table$booker == user_data$ID, ]
           
           output$cancel_table <-
             DT::renderDataTable(my_booked_table)

@@ -1,14 +1,10 @@
 
-# options(shiny.error = browser())
-
 library(shiny)
-library(shinyauthr)
 library(shinyjs)
 library(shinyhelper)
 library(shinydashboard)
-library(sodium)         # hashing Passwords with 'sodium'
 library(jsonlite)
-library(rjson)          # define json format for data storage, querying
+library(rjson)
 library(RJSONIO)
 library(DT)
 library(DBI)
@@ -60,15 +56,14 @@ database <<- "../sql/room_avail.db"
 # reset database
 # file.copy(from = "schema_room_avail.db", to = database, overwrite = TRUE)
 
-
 body <- dashboardBody(
-  shinyjs::useShinyjs(),
-  tags$head(tags$style(".table{margin: 0 auto;}"),
-            tags$script(src = "https://cdnjs.cloudflare.com/ajax/libs/iframe-resizer/3.5.16/iframeResizer.contentWindow.min.js",
-                        type = "text/javascript"),
-            includeScript("returnClick.js")
-  ),
-  shinyauthr::loginUI("login"),
+  # shinyjs::useShinyjs(),
+  # tags$head(
+  #   tags$style(".table{margin: 0 auto;}"),
+  #   tags$script(src = "https://cdnjs.cloudflare.com/ajax/libs/iframe-resizer/3.5.16/iframeResizer.contentWindow.min.js",
+  #               type = "text/javascript"),
+  #   includeScript("returnClick.js")
+  # ),
   tabItems(
     tabItem(tabName = "Room_status_update", updateMyRoomStatusUI("room_status")),
     tabItem(tabName = "Room_booking", searchAvailRoomUI("room_booking")),
@@ -105,11 +100,9 @@ header <-  dashboardHeader(
   title = "Welcome to Polished Fribble (Beta)",
   titleWidth = 450,
   tags$li(class = "dropdown",
-          style = "padding: 8px;",
-          shinyauthr::logoutUI("logout")),
+          style = "padding: 8px;"),
   tags$li(class = "dropdown",
           tags$a(icon("github"), 
-                 href = "https://github.com/paulc91/shinyauthr",
                  title = "See the code on GitHub")))
 
 # -------------------------------------------------------------------------
@@ -129,34 +122,10 @@ server <- shinyServer(function(input, output, session) {
   
   indiv_table <- loadData(database, 'individual_information')
   
-  logout_init <- callModule(module = shinyauthr::logout, 
-                            id = "logout", 
-                            active = reactive(credentials()$user_auth))
-  login_info <-
-    data.frame(
-      ID = indiv_table$UserName,
-      Password = indiv_table$Password,
-      Password_Hash = sapply(indiv_table$Password,
-                             sodium::password_store),
-      Permissions = indiv_table$Permissions)
-  
-  credentials <- callModule(shinyauthr::login,
-                            id = "login", 
-                            data = login_info,
-                            user_col = ID,
-                            pwd_col = Password,
-                            sodium_hashed = FALSE,
-                            log_out = reactive(logout_init()))
-  
-  observe({
-    if (credentials()$user_auth) {
-      shinyjs::removeClass(selector = "body",
-                           class = "sidebar-collapse")
-    } else {
-      shinyjs::addClass(selector = "body",
-                        class = "sidebar-collapse")
-    }
-  })
+  ##TODO:...
+  credentials <- 
+    list(auth = credentials_auth,
+         info = c(ID = credentials_info_ID))
   
   updateMyRoomStatusServer("room_status", credentials)
   searchAvailRoomServer("room_booking", credentials)
@@ -164,7 +133,14 @@ server <- shinyServer(function(input, output, session) {
   helpServer("help", credentials)
 })
 
+Sys.setenv(CREDENTIALS_INFO_ID = "Simon")
+Sys.setenv(CREDENTIALS_AUTH = TRUE)
+# Sys.setenv(SHINYPROXY_USERGROUPS = "shinyroom")
+
+credentials_info_ID <- Sys.getenv("CREDENTIALS_INFO_ID", unset="")
+credentials_auth <- Sys.getenv("CREDENTIALS_AUTH", unset="")
+# shinyproxy_usergroups <- Sys.getenv("SHINYPROXY_USERGROUPS", unset="")
+
 # run application 
 shinyApp(ui = ui, server = server)
-# runApp("after_login_v7.5.R", display.mode = "showcase")
 
