@@ -117,14 +117,17 @@ updateMyRoomStatusServer <- function(id, credentials) {
           
           print(c("rows_existing:", rows_existing))
           
-          rooms_existing <- room_table[rows_existing, ]
-          print(c("rooms_existing:", rooms_existing))
+          rooms_existing <- room_table[rows_existing, , drop = FALSE]
+          print("rooms_existing:\n")
+          print(rooms_existing)
           
           is_room_booked <- rooms_existing == "Booked"
-          print(c("is_room_booked:", is_room_booked))
+          print("is_room_booked:\n")
+          print(is_room_booked)
           
           is_already_booked <- any(as.matrix(is_room_booked))
-          print(c("is_already_booked:", is_already_booked))
+          print("is_already_booked:\n")
+          print(is_already_booked)
           
           if (is_existing_record && is_already_booked) {
             
