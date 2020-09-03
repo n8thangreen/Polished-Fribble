@@ -5,8 +5,9 @@ time_lup <- function(index) {
   
   inp <-
     index %>% 
-    as.tibble() %>% 
-    rename(date_row = V1 , time_col = V2) %>% 
+    as_tibble(.name_repair = "unique") %>% 
+    rename(date_row = '...1' ,
+           time_col = '...2') %>% 
     mutate_all(as.character)
   
   slots_9to5 <-

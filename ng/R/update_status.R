@@ -47,31 +47,45 @@ update_status <- function(room_no,
       unlist()
   }
   
+  db <- dbConnect(drv,
+                  dbname = database,
+                  host = options()$edwinyu$host, 
+                  port = options()$edwinyu$port,
+                  user = options()$edwinyu$user, 
+                  password = options()$edwinyu$password)
+  on.exit(dbDisconnect(db))
+  
   time_slots <- c("9am_10am", "10am_11am", "11am_12pm", "12pm_1pm",
                   "1pm_2pm", "2pm_3pm", "3pm_4pm", "4pm_5pm")
   
   if (use == "write") {
-    
-    A <- tibble(date = date,
-                weekday = date_to_weekday(date),
-                room_no = room_no,
-                am = am,
-                avail = case_when(
-                  am == "am" ~ list(c(rep("Available",3), rep("Unavailable",5))),
-                  am == "pm" ~ list(c(rep("Unavailable",3), rep("Available",5))),
-                  am == "both" ~ list(c(rep("Available",3), rep("Available",5))),
-                  am == "neither" ~ list(c(rep("Unavailable",3), rep("Unavailable",5)))),
-    ) %>% 
+    print(paste("write"))
+    A <-
+      tibble(date = date,
+             weekday = date_to_weekday(date),
+             room_no = room_no,
+             am = am,
+             avail = case_when(
+               am == "am" ~ list(c(rep("Available",3), rep("Unavailable",5))),
+               am == "pm" ~ list(c(rep("Unavailable",3), rep("Available",5))),
+               am == "both" ~ list(c(rep("Available",3), rep("Available",5))),
+               am == "neither" ~ list(c(rep("Unavailable",3), rep("Unavailable",5))))
+      ) %>% 
       select(-am)
     
+    print(paste("A:", A))
+    
     q <- parse_query(A)
+    print(paste("q:", q))
     
   } else if (use == "booking") {
+    print(paste("booking"))
     
     A <- tibble(date = date,
                 weekday = date_to_weekday(date),
                 room_no = room_no) %>% 
-      cbind.data.frame(as_tibble(avail, .name_repair = "minimal")) %>% 
+      cbind.data.frame(
+        as_tibble(avail, .name_repair = "minimal")) %>% 
       group_by(date, weekday, room_no) %>%
       nest() %>% 
       rename(avail = data)
@@ -79,9 +93,7 @@ update_status <- function(room_no,
     q <- parse_query(A)
   }
   
-  table_headings <- c("Weekday", "Room_no",
-                      "9am_10am", "10am_11am", "11am_12pm",
-                      "12pm_1pm", "1pm_2pm", "2pm_3pm", "3pm_4pm", "4pm_5pm")
+  table_headings <- c("Weekday", "Room_no", time_slots)
   
   # slightly different syntax
   if (class(drv) == "MySQLDriver") {
@@ -101,16 +113,9 @@ update_status <- function(room_no,
       "ON CONFLICT (Date, Room_no) DO UPDATE SET ",
       paste(sprintf("'%1$s' = excluded.'%1$s'", table_headings), collapse = ", "))
   }
-  
-  db <- dbConnect(drv,
-                  dbname = database,
-                  host = options()$edwinyu$host, 
-                  port = options()$edwinyu$port,
-                  user = options()$edwinyu$user, 
-                  password = options()$edwinyu$password)
-  on.exit(dbDisconnect(db))
-  
-  # sapply(query, FUN = function(x) dbGetQuery(conn = db, x))
-  sapply(query, FUN = function(x) dbExecute(conn = db, x))
+
+  print(paste("query:", query))
+  sapply(query, FUN = function(x) dbGetQuery(conn = db, x))
+  # sapply(query, FUN = function(x) dbExecute(conn = db, x))
 }
 

@@ -7,9 +7,9 @@ create_candidate_table <- function(input,
                                    user_ID) {
   
   # no times selected
-  if (is.null(input$all_cells_selected)) return(NULL)
-  if (dim(input$all_cells_selected)[2] != 2) return(NULL)
-  if (any(is.na(input$all_cells_selected))) return(NULL)
+  if (is.null(input$all_table_cells_selected)) return(NULL)
+  if (dim(input$all_table_cells_selected)[2] != 2) return(NULL)
+  if (any(is.na(input$all_table_cells_selected))) return(NULL)
   
   room_table <- loadData(database, 'new_room_status')
   indiv_table <- loadData(database, 'individual_information')
@@ -18,9 +18,9 @@ create_candidate_table <- function(input,
                             input$date_search,
                             user_ID)
   
-  index  <- input$all_cells_selected
-  row_id <- input$all_cells_selected[, 1]
-  col_id <- input$all_cells_selected[, 2]
+  index  <- input$all_table_cells_selected
+  row_id <- input$all_table_cells_selected[, 1]
+  col_id <- input$all_table_cells_selected[, 2]
   
   time_slots <- time_lup(index)
   num_dates <- as.vector(unique(row_id))
@@ -56,12 +56,13 @@ create_candidate_table <- function(input,
   candidate <- NULL
   
   for (i in seq_along(num_dates)) {
-    candidate <- rbind(candidate,
-                       room_table[
-                         interval_avail[i, ] &
-                           room_table$Date == as.character(booking_cand[[i]]$Date) &
-                           room_table$Room_no != my_room_no &
-                           room_table$Room_no == booking_cand[[i]]$Room_no, ])
+    candidate <-
+      rbind(candidate,
+            room_table[
+              interval_avail[i, ] &
+                room_table$Date == as.character(booking_cand[[i]]$Date) &
+                room_table$Room_no != my_room_no &
+                room_table$Room_no == booking_cand[[i]]$Room_no, ])
   }
   
   # change status to booked
