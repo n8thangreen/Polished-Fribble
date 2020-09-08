@@ -90,7 +90,6 @@ searchAvailRoomServer <- function(id, credentials) {
             
             counter_search <<- input$search
             
-            # req(credentials()$user_auth)
             req(input$date_search)
             
             table_shown <- tableShown(input$checkbox_ampm,
@@ -152,6 +151,8 @@ searchAvailRoomServer <- function(id, credentials) {
               times_to_book <- time_lup(input$all_table_cells_selected)
               
               candidate <- select(candidate, -Room_no, -Date, -Weekday)
+              
+              print(input$all_table_cells_selected)
               
               # change from Available -> Booked
               update_status(use = "booking",

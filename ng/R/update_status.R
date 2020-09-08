@@ -1,7 +1,7 @@
 
 #' Update status
 #'
-#' update rows in table "new_room_status" from database "room_avail"
+#' Update rows in table "new_room_status" from database "room_avail".
 #'
 #' - "write", function inputs am="am"/"pm"/"both"/"neither",
 #'      used for writing personal (own) room status to the table
@@ -15,7 +15,7 @@
 #'
 #' @param room_no 
 #' @param date Format "2020-06-13"
-#' @param use 
+#' @param use 'write' or 'booking'
 #' @param am 
 #' @param avail Room availability. From 9am to 5pm either Available or Unavailable. Matrix.
 #' @param database 

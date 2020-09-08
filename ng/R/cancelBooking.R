@@ -75,9 +75,13 @@ cancelBookingServer <- function(id, credentials) {
                            database = database,
                            table = "room_booked")
             
+            print(paste("room_no:", delete_info$room_no))
+            print(paste("date:", delete_info$date))
+            print(paste("avail:", avail))
+            
             update_status(use = "booking",
-                          room_no = delete_info$room_no,
-                          date = delete_info$date,
+                          room_no = delete_info$room_no[1],
+                          date = delete_info$date[1],
                           avail = avail,
                           database = database,
                           table = "new_room_status")

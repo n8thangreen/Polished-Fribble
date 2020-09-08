@@ -103,7 +103,6 @@ server <- shinyServer(function(input, output, session) {
   
   indiv_table <- loadData(database, 'individual_information')
   
-  ##TODO:...
   credentials <-
     list(auth = credentials_auth,
          info = c(ID = credentials_info_ID))
@@ -120,8 +119,9 @@ Sys.setenv(CREDENTIALS_AUTH = TRUE)
 # Sys.setenv(SHINYPROXY_USERGROUPS = "shinyroom")
 
 ## set user
+## COMMENT OUT FOR SHINYSERVER
 # Sys.setenv(SHINYPROXY_USERNAME = "Simon")
-# Sys.setenv(SHINYPROXY_USERNAME = "sruser01")
+Sys.setenv(SHINYPROXY_USERNAME = "sruser01")
 
 
 credentials_info_ID <- Sys.getenv("SHINYPROXY_USERNAME", unset = "")

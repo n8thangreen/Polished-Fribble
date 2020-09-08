@@ -42,12 +42,15 @@ delete_status <- function(room_no,
 }
 
 
-# update booking for table room_booked
-#
+#' Update booking for table room_booked
+#'
+#' @param time_idx Matrix cols: row idx, col idx
+#' @param booking_no Created internally if none provided
+#'
 update_booking <- function(room_no,
                            booker,
                            date,
-                           time_idx,        # list
+                           time_idx,
                            booking_no = NA,
                            database,
                            table){
@@ -92,23 +95,30 @@ update_booking <- function(room_no,
     unlist()
   
   if (class(drv) == "MySQLDriver") {
-  query <- paste(
-    sprintf(
-    "INSERT INTO %s VALUES ('%s')",
-    table,
-    paste(values, collapse = "', '")),
-    "ON DUPLICATE KEY UPDATE",
-    paste(sprintf("%1$s = VALUES(%1$s)", value_names), collapse = ", "))
-  
-  } else if (class(drv) == "SQLiteDriver") {
-
     query <- paste(
-      paste0(
-        sprintf(
-          "INSERT INTO %s VALUES ('%s')", table, q),
-        " ON CONFLICT (date, time, room_no) DO UPDATE SET ",
-        paste(sprintf("'%1$s' = excluded.'%1$s'", value_names), collapse = ", "), ";"),
-      collapse = " ")
+      sprintf(
+        "INSERT INTO %s VALUES ('%s')",
+        table,
+        paste(values, collapse = "', '")),
+      "ON DUPLICATE KEY UPDATE",
+      paste(sprintf("%1$s = VALUES(%1$s)", value_names), collapse = ", "))
+    
+  } else if (class(drv) == "SQLiteDriver") {
+    
+    ##TODO: primary key conflict. how to check on multiple columns...
+    # query <- paste(
+    #   paste0(
+    #     sprintf(
+    #       "INSERT INTO %s VALUES ('%s')", table, q),
+    #     # " ON CONFLICT (date, time, room_no) DO UPDATE SET ",
+    #     # paste(sprintf("'%1$s' = excluded.'%1$s'", value_names), collapse = ", "),
+    #     ";"),
+    #   collapse = " ")
+    
+    query <- 
+      paste(
+        sprintf("INSERT or IGNORE into %s VALUES", table),
+        paste0("('", q, "')", collapse = ", "))
   }
   
   dbGetQuery(db, query)
