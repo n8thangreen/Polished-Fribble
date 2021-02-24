@@ -25,11 +25,9 @@ updateMyRoomStatusServer <- function(id, credentials) {
         
         ns <- session$ns
         
-        # req(credentials()$user_auth)
-        
         fluidPage(
           box(width = 3,
-              h4("Tell others when your room will be available for booking."),
+              h4("Tell others when your room will be available for booking. (Refresh if no table shown.)"),
               wellPanel(
                 dateInput(ns('date_update'),
                           label = 'Date',
@@ -83,7 +81,6 @@ updateMyRoomStatusServer <- function(id, credentials) {
       return(
         observeEvent(input$save_room, {   
           
-          # req(credentials$user_auth)
           user_data <- credentials$info
           
           print(user_data)

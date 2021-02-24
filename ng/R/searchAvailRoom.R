@@ -21,12 +21,10 @@ searchAvailRoomServer <- function(id, credentials) {
         
         ns <- session$ns
         
-        # req(credentials$user_auth)
-        
         indiv_table <- loadData(database, 'individual_information')
         
         fluidRow(box(width = 3,
-                     h4("Find out which room can be booked: "),
+                     h4("Find out which room can be booked (Refresh if no table shown): "),
                      wellPanel(
                        dateInput(ns("date_search"),
                                  label = 'Date',

@@ -16,12 +16,10 @@ cancelBookingServer <- function(id, credentials) {
       output$cancel <- renderUI({
         
         ns <- session$ns
-        
-        # req(credentials$user_auth)
 
         fluidPage(
           box(width = 3,
-              h4("Cancel the booked room"),
+              h4("Cancel the booked room (Refresh if no table shown.)"),
               textInput(ns("booking_no"),
                         "Input booking number here:",
                         value = "") %>%

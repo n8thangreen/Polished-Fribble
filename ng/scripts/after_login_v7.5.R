@@ -1,4 +1,12 @@
 
+# main script for Polished Fribble
+# a room booking Shiny app
+#
+# original code by Runlong Yu & Yunjie He
+# latest version by Nathan Green
+# {}(github.com/n8thangreen/Polished-Fribble)
+
+
 library(shiny)
 library(shinyjs)
 library(shinyhelper)
