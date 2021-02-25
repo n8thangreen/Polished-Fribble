@@ -38,19 +38,30 @@ source("../R/cancelBooking.R")
 source("../R/help_tab.R")
 
 
-# database source
+## database source
+
 options(edwinyu = list(
   "host" = NULL,
   "port" = 0,
   "user" = NULL,
   "password" = NULL
 ))
+database <<- "../sql/room_avail.db"
+
+# options(edwinyu = list(
+#   "host" = "hub.stats.ucl.ac.uk",
+#   "port" = 3306,
+#   "user" = "shinyroom",
+#   "password" = NULL
+# ))
+# database <<- "shinyroom"
 
 drv <<- RSQLite::SQLite()
-database <<- "../sql/room_avail.db"
 
 # reset database
 # file.copy(from = "schema_room_avail.db", to = database, overwrite = TRUE)
+
+# -------------------------------------------------------------------------
 
 body <- dashboardBody(
   tabItems(
@@ -123,13 +134,17 @@ server <- shinyServer(function(input, output, session) {
 
 # -------------------------------------------------------------------------
 
+# shiny password removed
 Sys.setenv(CREDENTIALS_AUTH = TRUE)
 # Sys.setenv(SHINYPROXY_USERGROUPS = "shinyroom")
 
 ## set user
-## COMMENT OUT FOR SHINYSERVER
-# Sys.setenv(SHINYPROXY_USERNAME = "Simon")
-Sys.setenv(SHINYPROXY_USERNAME = "sruser01")
+
+###############################
+# COMMENT OUT FOR SHINYSERVER #
+###############################
+# Sys.setenv(SHINYPROXY_USERNAME = "ucakpde")
+# Sys.setenv(SHINYPROXY_USERNAME = "sejjng1")
 
 
 credentials_info_ID <- Sys.getenv("SHINYPROXY_USERNAME", unset = "")
