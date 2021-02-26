@@ -30,6 +30,7 @@ source("../R/room_confirm_msg.R")
 source("../R/create_candidate_table.R")
 source("../R/time_lup.R")
 source("../R/helper_fns.R")
+source("../../db_conn.R")
 
 # modules
 source("../R/searchAvailRoom.R")
@@ -39,7 +40,7 @@ source("../R/help_tab.R")
 
 
 ## database source
-
+# local
 options(edwinyu = list(
   "host" = NULL,
   "port" = 0,
@@ -48,13 +49,13 @@ options(edwinyu = list(
 ))
 database <<- "../sql/room_avail.db"
 
-# options(edwinyu = list(
-#   "host" = "hub.stats.ucl.ac.uk",
-#   "port" = 3306,
-#   "user" = "shinyroom",
-#   "password" = NULL
-# ))
-# database <<- "shinyroom"
+# server
+options(edwinyu = list(
+  host = conn_host,
+  dbname = conn_dbname,
+  user = conn_user,
+  password = conn_password))
+database <<- conn_dbname
 
 drv <<- RSQLite::SQLite()
 
