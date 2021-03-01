@@ -30,7 +30,11 @@ source("../R/room_confirm_msg.R")
 source("../R/create_candidate_table.R")
 source("../R/time_lup.R")
 source("../R/helper_fns.R")
-source("../../db_conn.R")
+
+# password
+# comment out as appropriate
+# source("../../db_conn.R")
+source("../../db_conn-proto.R")
 
 # modules
 source("../R/searchAvailRoom.R")
