@@ -96,13 +96,13 @@ update_booking <- function(room_no,
   
   if (class(drv) == "MySQLDriver") {
     query <- paste(
-      sprintf(
-        "INSERT INTO %s VALUES ('%s')",
-        table,
-        paste(values, collapse = "', '")),
+      sprintf("INSERT into %s VALUES", table),
+      paste0("('", q, "')", collapse = ", "),
       "ON DUPLICATE KEY UPDATE",
       paste(sprintf("%1$s = VALUES(%1$s)", value_names), collapse = ", "))
     
+    print(query)
+
   } else if (class(drv) == "SQLiteDriver") {
     
     ##TODO: primary key conflict. how to check on multiple columns...
@@ -153,12 +153,24 @@ new_booking_no <- function(booking_no,
   
   if (!is.na(booking_no)) return(booking_no)
   
-  max_booking_no <-
-    dbGetQuery(
-      db,
-      sprintf("SELECT MAX(booking_no) FROM %s WHERE typeof(booking_no) = 'integer'",
-              table)) %>% 
-    unlist()
+  if (class(drv) == "MySQLDriver") {
+    
+    max_booking_no <-
+      dbGetQuery(
+        db,
+        sprintf("SELECT MAX(booking_no) FROM %s",
+                table)) %>% 
+      unlist()
+    
+  } else if (class(drv) == "SQLiteDriver") {
+    
+    max_booking_no <-
+      dbGetQuery(
+        db,
+        sprintf("SELECT MAX(booking_no) FROM %s WHERE typeof(booking_no) = 'integer'",
+                table)) %>% 
+      unlist()
+  }
   
   if (length(max_booking_no) == 0 | is.na(max_booking_no))
     max_booking_no <- 0L

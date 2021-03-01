@@ -149,13 +149,17 @@ updateMyRoomStatusServer <- function(id, credentials) {
                           table = 'new_room_status')
           }
           
-          room_table <- loadData(database, 'new_room_status')
+          print(paste("room_table: ", room_table))
+
+          # room_table <- loadData(database, 'new_room_status')
+          print(my_room_no)
+          
           personal_table <-
             room_table[room_table$Room_no == my_room_no &
                          !is_past(room_table$Date), ] %>% 
             arrange(desc(Date))
           
-          print(paste("personal_table:", personal_table))
+          # print(paste("personal_table:", personal_table))
           
           output$personal_table <-
             DT::renderDataTable({

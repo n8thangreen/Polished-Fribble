@@ -40,6 +40,10 @@ tableShown <- function(checkbox,
   print(room_table$Date %in% as.character(date_search))
   print(room_table$Room_no != my_room_no)
   
+  print(avail_ampm)
+  print(room_table$Date)
+  print(room_table$Room_no)
+  
   table_shown <- room_table[avail_ampm &
                               room_table$Date %in% as.character(date_search) &
                               room_table$Room_no != my_room_no, ]

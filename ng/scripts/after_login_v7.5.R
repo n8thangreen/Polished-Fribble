@@ -41,23 +41,25 @@ source("../R/help_tab.R")
 
 ## database source
 # local
-options(edwinyu = list(
-  "host" = NULL,
-  "port" = 0,
-  "user" = NULL,
-  "password" = NULL
-))
-database <<- "../sql/room_avail.db"
+# options(edwinyu = list(
+#   "host" = NULL,
+#   "port" = 0,
+#   "user" = NULL,
+#   "password" = NULL
+# ))
+# database <<- "../sql/room_avail.db"
+# drv <<- RSQLite::SQLite()
 
 # server
 options(edwinyu = list(
-  host = conn_host,
-  dbname = conn_dbname,
-  user = conn_user,
-  password = conn_password))
-database <<- conn_dbname
+  "host" = conn_host,
+  "port" = conn_port,
+  "dbname" = conn_dbname,
+  "user" = conn_user,
+  "password" = conn_password))
 
-drv <<- RSQLite::SQLite()
+database <<- conn_dbname
+drv <<- RMySQL::MySQL()
 
 # reset database
 # file.copy(from = "schema_room_avail.db", to = database, overwrite = TRUE)
@@ -135,7 +137,7 @@ server <- shinyServer(function(input, output, session) {
 
 # -------------------------------------------------------------------------
 
-# shiny password removed
+# shiny login removed
 Sys.setenv(CREDENTIALS_AUTH = TRUE)
 # Sys.setenv(SHINYPROXY_USERGROUPS = "shinyroom")
 
