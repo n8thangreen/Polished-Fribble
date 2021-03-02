@@ -34,7 +34,7 @@ source("../R/helper_fns.R")
 # password
 # comment out as appropriate
 # source("../../db_conn.R")
-source("../../db_conn-proto.R")
+source("../R/db_conn-proto.R")
 
 # modules
 source("../R/searchAvailRoom.R")
