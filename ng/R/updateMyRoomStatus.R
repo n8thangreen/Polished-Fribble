@@ -27,7 +27,7 @@ updateMyRoomStatusServer <- function(id, credentials) {
         
         fluidPage(
           box(width = 3,
-              h4("Tell others when your room will be available for booking. (Refresh if no table shown.)"),
+              h4("Record when you are in the department. (Refresh if no table shown.)"),
               wellPanel(
                 dateInput(ns('date_update'),
                           label = 'Date',
@@ -37,15 +37,15 @@ updateMyRoomStatusServer <- function(id, credentials) {
                          size = "m",
                          title = "Guidance:",
                          content = c(
-                           "- Input the date on which your rooms will be available for booking",
+                           "- Input the date on which you will be in the department",
                            "- Then specify the exact period of the day: am, pm, both of them.",
                            "- After saving your chosen time slots,
                            it would be shown on the righthand side.",
-                           "- You may always modify your available time slots,
+                           "- You may always modify your In time slots,
                            so long as it isn't booked by someone else",
                            "- If you input nothing in this table,
                            your room will not appear in any search result
-                           (unavailable by default)"))),
+                           (available by default)"))),
               
               checkboxGroupInput(ns("time"),
                                  "Time",
@@ -62,9 +62,9 @@ updateMyRoomStatusServer <- function(id, credentials) {
               size = "m",
               content = c("Explanation about cells:",
                           "",
-                          "Available   :", "Your room can be booked for this time slot.",
+                          "Out :", "Your room can be booked for this time slot.",
                           "",
-                          "Unavailable :", "Your room cannot be booked for this time slot.",
+                          "In  :", "Your room cannot be booked for this time slot.",
                           "",
                           "Booked      :", "Others have booked your room for this time slot.",
                           "You can no longer make changes on this day.",

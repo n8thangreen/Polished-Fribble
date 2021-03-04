@@ -16,8 +16,8 @@
 #' @param room_no 
 #' @param date Format "2020-06-13"
 #' @param use 'write' or 'booking'
-#' @param am 
-#' @param avail Room availability. From 9am to 5pm either Available or Unavailable. Matrix.
+#' @param am am, pm, both, neither
+#' @param avail Room availability. From 9am to 5pm either In or Out. Matrix.
 #' @param database 
 #' @param table 
 #'
@@ -66,10 +66,10 @@ update_status <- function(room_no,
              room_no = room_no,
              am = am,
              avail = case_when(
-               am == "am" ~ list(c(rep("Available",3), rep("Unavailable",5))),
-               am == "pm" ~ list(c(rep("Unavailable",3), rep("Available",5))),
-               am == "both" ~ list(c(rep("Available",3), rep("Available",5))),
-               am == "neither" ~ list(c(rep("Unavailable",3), rep("Unavailable",5))))
+               am == "am" ~ list(c(rep("In",3), rep("Out",5))),
+               am == "pm" ~ list(c(rep("Out",3), rep("In",5))),
+               am == "both" ~ list(c(rep("In",3), rep("In",5))),
+               am == "neither" ~ list(c(rep("Out",3), rep("Out",5))))
       ) %>% 
       select(-am)
     

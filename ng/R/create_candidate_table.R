@@ -37,14 +37,14 @@ create_candidate_table <- function(input,
            time_slots = time_slots[[j]])
   }
   
-  ## all times available for each date?
+  ## all times in for each date?
   interval_avail <- NULL
   
   for (i in seq_along(num_dates)) {
     
     t <- time_slots[[i]]
     
-    dat <- apply(as.matrix(room_table[, t] == "Available"),
+    dat <- apply(as.matrix(room_table[, t] == "In"),
                  MARGIN = 1,
                  FUN = all)
     

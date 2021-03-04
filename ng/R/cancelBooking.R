@@ -19,7 +19,7 @@ cancelBookingServer <- function(id, credentials) {
 
         fluidPage(
           box(width = 3,
-              h4("Cancel the booked room (Refresh if no table shown.)"),
+              h4("Amend when you are in the department (Refresh if no table shown.)"),
               textInput(ns("booking_no"),
                         "Input booking number here:",
                         value = "") %>%
@@ -64,7 +64,7 @@ cancelBookingServer <- function(id, credentials) {
                      Room_no == delete_info$room_no) %>% 
               select(-Date, -Weekday, -Room_no)
             
-            avail[1, delete_info$time] <- "Available"
+            avail[1, delete_info$time] <- "In"
             
             my_room_no <-
               indiv_table$RoomNumber[indiv_table$UserName == user_data[['ID']]]

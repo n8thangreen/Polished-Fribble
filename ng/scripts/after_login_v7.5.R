@@ -33,8 +33,8 @@ source("../R/helper_fns.R")
 
 # password
 # comment out as appropriate
-# source("../../db_conn.R")
-source("../R/db_conn-proto.R")
+source("../R/db_conn.R")
+# source("../R/db_conn-proto.R")
 
 # modules
 source("../R/searchAvailRoom.R")
@@ -72,10 +72,10 @@ drv <<- RMySQL::MySQL()
 
 body <- dashboardBody(
   tabItems(
+    tabItem(tabName = "Help", helpUI("help")),
     tabItem(tabName = "Room_status_update", updateMyRoomStatusUI("room_status")),
     tabItem(tabName = "Room_booking", searchAvailRoomUI("room_booking")),
-    tabItem(tabName = "Room_booked", cancelBookingUI("cancel")),
-    tabItem(tabName = "Help", helpUI("help"))
+    tabItem(tabName = "Room_booked", cancelBookingUI("cancel"))
   ),
   
   HTML('<div data-iframe-height></div>')
@@ -86,25 +86,25 @@ body <- dashboardBody(
 sidebar <- dashboardSidebar(
   collapsed = FALSE,
   sidebarMenu(width = 70,
-              menuItem(text = 'Room Status Update',
+              menuItem(text = "Welcome",
+                       tabName = 'Help',
+                       icon = icon('info')),
+              menuItem(text = 'Are you in or out?',
                        tabName = 'Room_status_update',
                        icon = icon('table')),
-              menuItem(text = 'Room booking',
+              menuItem(text = 'Find somewhere to work',
                        tabName = 'Room_booking',
                        icon = icon('table')), 
-              menuItem(text = "My Booked Room",
+              menuItem(text = "Amend my record",
                        tabName = 'Room_booked',
-                       icon = icon('table')),
-              menuItem(text = "Help",
-                       tabName = 'Help',
-                       icon = icon('info'))
+                       icon = icon('table'))
   )
 )
 
 # -------------------------------------------------------------------------
 
 header <-  dashboardHeader(
-  title = "Welcome to Polished Fribble (Beta)",
+  title = "",
   titleWidth = 450,
   tags$li(class = "dropdown",
           style = "padding: 8px;"),
@@ -151,7 +151,7 @@ Sys.setenv(CREDENTIALS_AUTH = TRUE)
 # COMMENT OUT FOR SHINYSERVER #
 ###############################
 # Sys.setenv(SHINYPROXY_USERNAME = "ucakpde")
-# Sys.setenv(SHINYPROXY_USERNAME = "sejjng1")
+Sys.setenv(SHINYPROXY_USERNAME = "sejjng1")
 
 
 credentials_info_ID <- Sys.getenv("SHINYPROXY_USERNAME", unset = "")

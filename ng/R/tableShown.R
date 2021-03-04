@@ -1,8 +1,8 @@
 
-# filtered room status for each date
-# to display for search
-# and working out which date-times clicked
-#
+#' filtered room status for each date
+#' to display for search
+#' and working out which date-times clicked
+#'
 tableShown <- function(checkbox,
                        date_search,
                        username) {
@@ -27,7 +27,7 @@ tableShown <- function(checkbox,
                        "ampm",
                        ifelse(time %in% am_times, "am", "pm"))) %>% 
     group_by(Date, Room_no, ampm) %>% 
-    summarise(free = any(value == "Available")) %>%  # at least one free slot?
+    summarise(free = any(value == "In")) %>%  # at least one free slot?
     filter(ampm == search_time) %>%
     ungroup() %>% 
     select(free)
@@ -36,16 +36,11 @@ tableShown <- function(checkbox,
   
   if (nrow(avail_ampm) == 0) avail_ampm <- rep(FALSE, nrow(room_table))
   
-  print(avail_ampm)
-  print(room_table$Date %in% as.character(date_search))
-  print(room_table$Room_no != my_room_no)
+  table_shown <-
+    room_table[avail_ampm &
+                 room_table$Date %in% as.character(date_search) &
+                 room_table$Room_no != my_room_no, ] %>% 
+    rbind(rooms_all_out)
   
-  print(avail_ampm)
-  print(room_table$Date)
-  print(room_table$Room_no)
-  
-  table_shown <- room_table[avail_ampm &
-                              room_table$Date %in% as.character(date_search) &
-                              room_table$Room_no != my_room_no, ]
   table_shown
 }

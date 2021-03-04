@@ -24,7 +24,7 @@ searchAvailRoomServer <- function(id, credentials) {
         indiv_table <- loadData(database, 'individual_information')
         
         fluidRow(box(width = 3,
-                     h4("Find out which room can be booked (Refresh if no table shown): "),
+                     h4("Search for space in the department (Refresh if no table shown): "),
                      wellPanel(
                        dateInput(ns("date_search"),
                                  label = 'Date',
@@ -35,10 +35,10 @@ searchAvailRoomServer <- function(id, credentials) {
                                 title = 'Guidance:',
                                 content = c(
                                   "- You can search for others' room availability here,
-                                and make your booking in the next section.",
+                                and record somewhere to work in the next section.",
                                   "- Please select the date and the approximate time you
-                                wish to use other's office, and then press 'Search'.",
-                                  "- If any room satisfys your requirements, it will be
+                                wish to be in the department, and then press 'Search'.",
+                                  "- If any rooms satisfy your requirements, they will be
                                 shown on the right.")
                          )),
                      checkboxGroupInput(ns("checkbox_ampm"),
@@ -62,9 +62,9 @@ searchAvailRoomServer <- function(id, credentials) {
                          title = '"How to select the time slot?',
                          content = c(
                            "- Please click on the cells within the data table on the right.",
-                           "- Corresponding room information would appear in the box below.",
-                           "- You may then confirm your booking, but notice that 'Booked' or
-                       'Unavailable' rooms cannot be booked.")
+                           "- Corresponding room information will appear in the box below.",
+                           "- You may then confirm your selection, but notice that 'Booked' or
+                       'In' rooms cannot be reserved")
                        ),
                      tags$head(
                        tags$style(
@@ -89,6 +89,8 @@ searchAvailRoomServer <- function(id, credentials) {
             counter_search <<- input$search
             
             req(input$date_search)
+            
+            appendAllAvailable(input$date_search)
             
             table_shown <- tableShown(input$checkbox_ampm,
                                       input$date_search,
@@ -152,7 +154,7 @@ searchAvailRoomServer <- function(id, credentials) {
               
               print(input$all_table_cells_selected)
               
-              # change from Available -> Booked
+              # change from Available -> In
               update_status(use = "booking",
                             room_no = room_no_to_book,
                             date = dates_to_book, 
