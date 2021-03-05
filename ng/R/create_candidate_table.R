@@ -44,13 +44,12 @@ create_candidate_table <- function(input,
     
     t <- time_slots[[i]]
     
-    dat <- apply(as.matrix(room_table[, t] == "In"),
+    dat <- apply(as.matrix(room_table[, t] == "Out"),
                  MARGIN = 1,
                  FUN = all)
     
     interval_avail <- rbind(interval_avail, dat)
   }
-  
   my_room_no <- indiv_table$RoomNumber[indiv_table$UserName == user_ID]
   
   candidate <- NULL

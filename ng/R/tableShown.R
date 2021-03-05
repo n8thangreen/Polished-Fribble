@@ -23,11 +23,12 @@ tableShown <- function(checkbox,
     as_tibble() %>%
     melt(id.vars = c("Date", "Weekday", "Room_no"),
          variable.name = "time") %>% 
-    mutate(ampm = ifelse(search_time == "ampm",       # group by time of day
-                       "ampm",
-                       ifelse(time %in% am_times, "am", "pm"))) %>% 
+    mutate(search_time = search_time,
+           time_in_am = time %in% am_times,
+           ampm = if_else(time_in_am, "am", "pm"),
+           ampm = if_else(search_time == "ampm", "ampm", ampm)) %>% 
     group_by(Date, Room_no, ampm) %>% 
-    summarise(free = any(value == "In")) %>%  # at least one free slot?
+    summarise(free = any(value == "Out")) %>%  # at least one free slot?
     filter(ampm == search_time) %>%
     ungroup() %>% 
     select(free)
@@ -39,8 +40,7 @@ tableShown <- function(checkbox,
   table_shown <-
     room_table[avail_ampm &
                  room_table$Date %in% as.character(date_search) &
-                 room_table$Room_no != my_room_no, ] %>% 
-    rbind(rooms_all_out)
+                 room_table$Room_no != my_room_no, ] 
   
   table_shown
 }

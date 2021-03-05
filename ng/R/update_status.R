@@ -1,5 +1,5 @@
 
-#' Update status
+#' Update room status
 #'
 #' Update rows in table "new_room_status" from database "room_avail".
 #'
@@ -7,13 +7,14 @@
 #'      used for writing personal (own) room status to the table
 #' - "booking", the function inputs avail. used for someone else's room
 #'
-#' avail is an n by 8 matrix, each row corresponds to 8 periods for certain room on a specific day
+#' avail is an n by 8 matrix, each row corresponds to 8 periods for certain room
+#' on a specific day.
 #'
 #' new_room_status is a table created in MySQL with Room_no and Date as PRIMARY,
 #' so that when updating rows with the same Room_no and Date existing in the table
 #' it modifies the existing row rather than adding a new row
 #'
-#' @param room_no 
+#' @param room_no One or more room IDs
 #' @param date Format "2020-06-13"
 #' @param use 'write' or 'booking'
 #' @param am am, pm, both, neither
@@ -33,7 +34,7 @@ update_status <- function(room_no,
                           table = 'new_room_status') {
   
   # contain in speech marks and paste together
-  ## dbQuoteLiteral() use?
+  ## dbQuoteLiteral() use instead?
   parse_query <- function(dat) {
     
     dat %>% 
@@ -56,10 +57,9 @@ update_status <- function(room_no,
   on.exit(dbDisconnect(db), add = TRUE)
   
   time_slots <- c("9am_10am", "10am_11am", "11am_12pm", "12pm_1pm",
-                  "1pm_2pm", "2pm_3pm", "3pm_4pm", "4pm_5pm")
+                  "1pm_2pm",  "2pm_3pm",   "3pm_4pm",   "4pm_5pm")
   
   if (use == "write") {
-    print(paste("write"))
     A <-
       tibble(date = date,
              weekday = date_to_weekday(date),
@@ -72,7 +72,6 @@ update_status <- function(room_no,
                am == "neither" ~ list(c(rep("Out",3), rep("Out",5))))
       ) %>% 
       select(-am)
-    
     print(paste("A:", A))
     
     q <- parse_query(A)
@@ -114,7 +113,10 @@ update_status <- function(room_no,
       paste(sprintf("'%1$s' = excluded.'%1$s'", table_headings), collapse = ", "))
   }
 
+  ##TODO: hack in case of single string to list
+  query <- as.list(strsplit(query, ";")[[1]])
   print(paste("query:", query))
+  
   sapply(query, FUN = function(x) dbGetQuery(conn = db, x))
   # sapply(query, FUN = function(x) dbExecute(conn = db, x))
 }

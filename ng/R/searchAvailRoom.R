@@ -122,7 +122,7 @@ searchAvailRoomServer <- function(id, credentials) {
             
             counter_book <<- input$book
             candidate <- create_candidate_table(input, user_data[['ID']])
-            notif_duration <- 30
+            notif_duration <- 10
             
             if (is.null(candidate)) {
               showNotification("Please make a selection",
@@ -140,8 +140,7 @@ searchAvailRoomServer <- function(id, credentials) {
                   duration = notif_duration)
                 
               } else if (nrow(input$all_table_cells_selected) == 1) {
-                
-                showNotification("No room is available for this time slot so far.",
+                showNotification("No room is available for this time slot.",
                                  type = "warning",
                                  closeButton = TRUE,
                                  duration = notif_duration)}
@@ -154,7 +153,7 @@ searchAvailRoomServer <- function(id, credentials) {
               
               print(input$all_table_cells_selected)
               
-              # change from Available -> In
+              # change from Out to In
               update_status(use = "booking",
                             room_no = room_no_to_book,
                             date = dates_to_book, 

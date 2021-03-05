@@ -30,11 +30,12 @@ source("../R/room_confirm_msg.R")
 source("../R/create_candidate_table.R")
 source("../R/time_lup.R")
 source("../R/helper_fns.R")
+source("../R/appendAllAvailable.R")
 
-# password
+# database password
 # comment out as appropriate
-source("../R/db_conn.R")
-# source("../R/db_conn-proto.R")
+# source("../R/db_conn.R")      # local
+source("../R/db_conn-proto.R")  # server
 
 # modules
 source("../R/searchAvailRoom.R")
@@ -151,7 +152,7 @@ Sys.setenv(CREDENTIALS_AUTH = TRUE)
 # COMMENT OUT FOR SHINYSERVER #
 ###############################
 # Sys.setenv(SHINYPROXY_USERNAME = "ucakpde")
-Sys.setenv(SHINYPROXY_USERNAME = "sejjng1")
+# Sys.setenv(SHINYPROXY_USERNAME = "sejjng1")
 
 
 credentials_info_ID <- Sys.getenv("SHINYPROXY_USERNAME", unset = "")

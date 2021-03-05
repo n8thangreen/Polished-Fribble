@@ -9,7 +9,10 @@ appendAllAvailable <- function(date_search) {
   
   # which rooms not in room_table?
   all_rooms <- unique(indiv_table$RoomNumber)
-  new_rooms <- sort(all_rooms[!(all_rooms %in% room_table$Room_no)])
+  logged_rooms <- room_table$Room_no[room_table$Date == date_search]
+  new_rooms <- sort(all_rooms[!(all_rooms %in% logged_rooms)])
+  
+  if (length(new_rooms) == 0) return()
   
   update_status(new_rooms,
                 date_search,
