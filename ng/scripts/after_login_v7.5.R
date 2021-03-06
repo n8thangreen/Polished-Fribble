@@ -33,9 +33,7 @@ source("../R/helper_fns.R")
 source("../R/appendAllAvailable.R")
 
 # database password
-# comment out as appropriate
-# source("../R/db_conn.R")      # local
-source("../R/db_conn-proto.R")  # server
+source("../R/db_conn.R")      # local & server
 
 # modules
 source("../R/searchAvailRoom.R")
