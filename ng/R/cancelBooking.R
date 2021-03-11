@@ -64,7 +64,7 @@ cancelBookingServer <- function(id, credentials) {
                      Room_no == delete_info$room_no) %>% 
               select(-Date, -Weekday, -Room_no)
             
-            avail[1, delete_info$time] <- "In"
+            avail[1, delete_info$time] <- "Out"
             
             my_room_no <-
               indiv_table$RoomNumber[indiv_table$UserName == user_data[['ID']]]
@@ -84,8 +84,6 @@ cancelBookingServer <- function(id, credentials) {
                           database = database,
                           table = "new_room_status")
             
-            ##TODO: is this the correct day?...
-            
             current <- weekdays(as.POSIXct(Sys.Date()), abbreviate = FALSE)
             
             cancel_confirm_msg <-
@@ -100,13 +98,13 @@ cancelBookingServer <- function(id, credentials) {
 
             showNotification(cancel_confirm_msg,
                              type = "message",
-                             duration = 30,
+                             duration = 10,
                              closeButton = TRUE)
           } else {
             showNotification(
               paste("Your booking reference number does not exist, recheck it please"),
               type = "message",
-              duration = 30,
+              duration = 10,
               closeButton = TRUE)
           }
           
