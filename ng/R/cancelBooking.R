@@ -51,6 +51,7 @@ cancelBookingServer <- function(id, credentials) {
           booked_table <- loadData(database, "room_booked")
           room_table <- loadData(database, 'new_room_status')
           indiv_table <- loadData(database, 'individual_information')
+          capacity_table <- loadData(database, 'room_capacity')
           
           if (length(input$booking_no) > 0 &&
               input$booking_no %in% booked_table$booking_no) {
@@ -64,7 +65,8 @@ cancelBookingServer <- function(id, credentials) {
                      Room_no == delete_info$room_no) %>% 
               select(-Date, -Weekday, -Room_no)
             
-            avail[1, delete_info$time] <- "Out"
+            # avail[1, delete_info$time] <- "Out"
+            avail[1, delete_info$time] <- as.numeric(avail[1, delete_info$time]) + 1
             
             my_room_no <-
               indiv_table$RoomNumber[indiv_table$UserName == user_data[['ID']]]

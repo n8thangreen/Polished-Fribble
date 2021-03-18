@@ -34,7 +34,7 @@ searchAvailRoomServer <- function(id, credentials) {
                                 size = "m",
                                 title = 'Guidance:',
                                 content = c(
-                                  "- You can search for others' room availability here,
+                                  "- You can search for room availability here,
                                 and record somewhere to work in the next section.",
                                   "- Please select the date and the approximate time you
                                 wish to be in the department, and then press 'Search'.",
@@ -80,8 +80,6 @@ searchAvailRoomServer <- function(id, credentials) {
       return(
         observeEvent(input$search | input$book, {
           
-          print(credentials)
-          
           user_data <- credentials$info
           
           if (length(input$search) > 0 && input$search == counter_search + 1) {
@@ -95,7 +93,6 @@ searchAvailRoomServer <- function(id, credentials) {
             table_shown <- tableShown(input$checkbox_ampm,
                                       input$date_search,
                                       user_data[['ID']])
-            
             output$all_table <-
               DT::renderDataTable(table_shown,
                                   selection = list(mode = "multiple",  # pick date-time cells
@@ -118,7 +115,8 @@ searchAvailRoomServer <- function(id, credentials) {
                              time = colnames(table_shown)[col_id])
                 }
               })
-          } else if (length(input$book) > 0 && input$book == counter_book + 1) {
+          } else if (length(input$book) > 0 &&
+                     input$book == counter_book + 1) {
             
             counter_book <<- input$book
             candidate <- create_candidate_table(input, user_data[['ID']])
@@ -150,8 +148,6 @@ searchAvailRoomServer <- function(id, credentials) {
               times_to_book <- time_lup(input$all_table_cells_selected)
               
               candidate <- select(candidate, -Room_no, -Date, -Weekday)
-              
-              print(input$all_table_cells_selected)
               
               # change from Out to In
               update_status(use = "booking",

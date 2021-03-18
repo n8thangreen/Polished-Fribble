@@ -82,14 +82,8 @@ updateMyRoomStatusServer <- function(id, credentials) {
         observeEvent(input$save_room, {   
           
           user_data <- credentials$info
-          
-          print(user_data)
-          
           date_update <- input$date_update
-          print(paste("date_update", date_update))
-          
           avail_time <- paste(input$time, collapse = "")
-          print(paste("avail_time", avail_time))
           
           ampm <- 
             switch(avail_time,
@@ -100,47 +94,37 @@ updateMyRoomStatusServer <- function(id, credentials) {
           
           room_table <- loadData(database, 'new_room_status')
           indiv_table <- loadData(database, 'individual_information')
+          booked_table <- loadData(database, "room_booked")
           
           my_room_no <-
             indiv_table$RoomNumber[indiv_table$UserName == user_data[['ID']]]
-          print(paste("my_room_no", my_room_no)) 
           
           rows_existing <-
             (room_table$Room_no == my_room_no) &
             (room_table$Date == date_update)
           
           is_existing_record <- any(rows_existing)
-          print(c("is_existing_record:", is_existing_record))
-          
-          print(c("rows_existing:", rows_existing))
           
           rooms_existing <- room_table[rows_existing, , drop = FALSE]
-          print("rooms_existing:\n")
-          print(rooms_existing)
-          
-          print(nrow(rooms_existing))
           
           if (nrow(rooms_existing) == 0) {
             is_room_booked <- FALSE
           } else {
-            is_room_booked <- rooms_existing == "Booked"
+            # is_room_booked <- rooms_existing == "Booked"
+            is_room_booked <-
+              (rooms_existing == 0 && my_room_no %in% booked_table$room_no)
           }
-          print("is_room_booked:\n")
-          print(is_room_booked)
           
           is_already_booked <- any(as.matrix(is_room_booked))
-          print("is_already_booked:\n")
-          print(is_already_booked)
           
           if (is_existing_record && is_already_booked) {
             
-            showNotification("Someone has booked your room already.
+            showNotification("Your room has reached capacity.
                                Please contact admin.",
                              type = "error",
                              duration = 30,
                              closeButton = TRUE)
           } else {
-            print("update_status()")
             update_status(use = "write",
                           room_no = my_room_no,
                           date = date_update,
@@ -149,17 +133,10 @@ updateMyRoomStatusServer <- function(id, credentials) {
                           table = 'new_room_status')
           }
           
-          print(paste("room_table: ", room_table))
-
-          # room_table <- loadData(database, 'new_room_status')
-          print(my_room_no)
-          
           personal_table <-
             room_table[room_table$Room_no == my_room_no &
                          !is_past(room_table$Date), ] %>% 
             arrange(desc(Date))
-          
-          # print(paste("personal_table:", personal_table))
           
           output$personal_table <-
             DT::renderDataTable({

@@ -56,41 +56,12 @@ update_status <- function(room_no,
                   password = options()$edwinyu$password)
   on.exit(dbDisconnect(db), add = TRUE)
   
+  booking_info <- list(room_no = room_no, date = date, am = am)
+  A <- make_room_status_entry(use, booking_info, avail)
+  q <- parse_query(A)
+  
   time_slots <- c("9am_10am", "10am_11am", "11am_12pm", "12pm_1pm",
                   "1pm_2pm",  "2pm_3pm",   "3pm_4pm",   "4pm_5pm")
-  
-  if (use == "write") {
-    A <-
-      tibble(date = date,
-             weekday = date_to_weekday(date),
-             room_no = room_no,
-             am = am,
-             avail = case_when(
-               am == "am" ~ list(c(rep("In",3), rep("Out",5))),
-               am == "pm" ~ list(c(rep("Out",3), rep("In",5))),
-               am == "both" ~ list(c(rep("In",3), rep("In",5))),
-               am == "neither" ~ list(c(rep("Out",3), rep("Out",5))))
-      ) %>% 
-      select(-am)
-    print(paste("A:", A))
-    
-    q <- parse_query(A)
-    print(paste("q:", q))
-    
-  } else if (use == "booking") {
-    print(paste("booking"))
-    
-    A <- tibble(date = date,
-                weekday = date_to_weekday(date),
-                room_no = room_no) %>% 
-      cbind.data.frame(
-        as_tibble(avail, .name_repair = "minimal")) %>% 
-      group_by(date, weekday, room_no) %>%
-      nest() %>% 
-      rename(avail = data)
-    
-    q <- parse_query(A)
-  }
   
   table_headings <- c("Weekday", "Room_no", time_slots)
   
@@ -112,12 +83,102 @@ update_status <- function(room_no,
       "ON CONFLICT (Date, Room_no) DO UPDATE SET ",
       paste(sprintf("'%1$s' = excluded.'%1$s'", table_headings), collapse = ", "))
   }
-
+  
   ##TODO: hack in case of single string to list
   query <- as.list(strsplit(query, ";")[[1]])
   print(paste("query:", query))
   
   sapply(query, FUN = function(x) dbGetQuery(conn = db, x))
   # sapply(query, FUN = function(x) dbExecute(conn = db, x))
+}
+
+
+# # In/Out bookings
+# # 
+# make_room_status_entry <- function(use, info, avail) {
+#   
+#   if (use == "write") {
+#     A <-
+#       tibble(date = info$date,
+#              weekday = date_to_weekday(date),
+#              room_no = info$room_no,
+#              am = info$am,
+#              avail = case_when(
+#                am == "am" ~ list(c(rep("In",3), rep("Out",5))),
+#                am == "pm" ~ list(c(rep("Out",3), rep("In",5))),
+#                am == "both" ~ list(c(rep("In",3), rep("In",5))),
+#                am == "neither" ~ list(c(rep("Out",3), rep("Out",5))))
+#       ) %>% 
+#       select(-am)
+#     
+#   } else if (use == "booking") {
+#     A <-
+#       tibble(date = info$date,
+#              weekday = date_to_weekday(date),
+#              room_no = info$room_no) %>% 
+#       cbind.data.frame(
+#         as_tibble(info$avail, .name_repair = "minimal")) %>% 
+#       group_by(date, weekday, room_no) %>%
+#       nest() %>% 
+#       rename(avail = data)
+#   } else {
+#     stop("use not recognised.")
+#   }
+#   
+#   return(A)
+# }
+
+
+# room occupancy numbers
+#
+# info <- list(room_no = "R.103", date = "2021-03-18", am = "am")
+# info <- list(room_no = list("R.103", "R.114"), date = "2021-03-18", am = "neither")
+#
+make_room_status_entry <- function(use, info, avail) {
+  
+  capacity_table <- loadData(database, "room_capacity")
+  
+  ##TODO: if someone else has already booked it then need to use latest occupancy number
+  if (use == "write") {
+    
+    capacity <-
+      merge(data.frame(RoomNumber = info$room_no), capacity_table) %>% 
+      select(limit) %>%      # 25%
+      # select(capacity) %>% # all desks 
+      unlist() %>%
+      unname()
+    
+    A <-
+      tibble(date = info$date,
+             weekday = date_to_weekday(date),
+             room_no = info$room_no,
+             am = info$am) %>% 
+      mutate(avail = case_when(
+        am == "am" ~ map(capacity, ~c(rep(.x - 1, 3), rep(.x, 5))),
+        am == "pm" ~ map(capacity, ~c(rep(.x, 3), rep(.x - 1, 5))),
+        am == "both" ~ map(capacity, ~c(rep(.x - 1, 3), rep(.x - 1, 5))),
+        am == "neither" ~ map(capacity, ~c(rep(.x, 3), rep(.x, 5))))
+      ) %>% 
+      select(-am)
+    
+    print(unnest(A, cols = c(avail)))
+    
+  } else if (use == "booking") {
+    ##TODO:...
+    A <-
+      tibble(date = info$date,
+             weekday = date_to_weekday(date),
+             room_no = info$room_no) %>% 
+      cbind.data.frame(
+        as_tibble(avail, .name_repair = "minimal")) %>% 
+      group_by(date, weekday, room_no) %>%
+      nest() %>% 
+      rename(avail = data)
+    
+  } else {
+    stop("use not recognised.")
+  }
+  
+  return(A)
 }
 

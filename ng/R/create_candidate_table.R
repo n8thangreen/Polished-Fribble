@@ -44,9 +44,11 @@ create_candidate_table <- function(input,
     
     t <- time_slots[[i]]
     
-    dat <- apply(as.matrix(room_table[, t] == "Out"),
-                 MARGIN = 1,
-                 FUN = all)
+    dat <-
+      apply(as.matrix(room_table[, t] > 0),
+      # apply(as.matrix(room_table[, t] == "Out"),
+            MARGIN = 1,
+            FUN = all)
     
     interval_avail <- rbind(interval_avail, dat)
   }
@@ -67,7 +69,8 @@ create_candidate_table <- function(input,
   # change status to booked
   if (nrow(candidate) > 0) {
     for (i in seq_along(num_dates)) {
-      candidate[i, time_slots[[i]]] <- "Booked"
+      candidate[i, time_slots[[i]]] <- as.numeric(candidate[i, time_slots[[i]]]) - 1
+      # candidate[i, time_slots[[i]]] <- "Booked"
     }
   }
   

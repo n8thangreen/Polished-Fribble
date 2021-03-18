@@ -28,7 +28,8 @@ tableShown <- function(checkbox,
            ampm = if_else(time_in_am, "am", "pm"),
            ampm = if_else(search_time == "ampm", "ampm", ampm)) %>% 
     group_by(Date, Room_no, ampm) %>% 
-    summarise(free = any(value == "Out")) %>%  # at least one free slot?
+    summarise(free = any(value > 0)) %>%  # at least one free slot?
+    # summarise(free = any(value == "Out")) %>%  # at least one free slot?
     filter(ampm == search_time) %>%
     ungroup() %>% 
     select(free)
