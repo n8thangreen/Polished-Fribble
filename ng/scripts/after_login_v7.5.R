@@ -41,28 +41,36 @@ source("../R/updateMyRoomStatus.R")
 source("../R/cancelBooking.R")
 source("../R/help_tab.R")
 
+# from RStudio
+RUN_LOCAL <- FALSE
 
-## database source
+# database source
+DB_REMOTE <- TRUE
+
 # local
-# options(edwinyu = list(
-#   "host" = NULL,
-#   "port" = 0,
-#   "user" = NULL,
-#   "password" = NULL
-# ))
-# database <<- "../sql/room_avail.db"
-# drv <<- RSQLite::SQLite()
+if (!DB_REMOTE) {
+  options(edwinyu = list(
+    "host" = NULL,
+    "port" = 0,
+    "user" = NULL,
+    "password" = NULL))
+  
+  database <<- "../sql/room_avail.db"
+  drv <<- RSQLite::SQLite()
+}
 
 # server
-options(edwinyu = list(
-  "host" = conn_host,
-  "port" = conn_port,
-  "dbname" = conn_dbname,
-  "user" = conn_user,
-  "password" = conn_password))
-
-database <<- conn_dbname
-drv <<- RMySQL::MySQL()
+if (DB_REMOTE) {
+  options(edwinyu = list(
+    "host" = conn_host,
+    "port" = conn_port,
+    "dbname" = conn_dbname,
+    "user" = conn_user,
+    "password" = conn_password))
+  
+  database <<- conn_dbname
+  drv <<- RMySQL::MySQL()
+}
 
 # reset database
 # file.copy(from = "schema_room_avail.db", to = database, overwrite = TRUE)
@@ -146,12 +154,10 @@ Sys.setenv(CREDENTIALS_AUTH = TRUE)
 
 ## set user
 
-###############################
-# COMMENT OUT FOR SHINYSERVER #
-###############################
-# Sys.setenv(SHINYPROXY_USERNAME = "ucakpde")
-# Sys.setenv(SHINYPROXY_USERNAME = "sejjng1")
-
+if (RUN_LOCAL) {
+  # Sys.setenv(SHINYPROXY_USERNAME = "ucakpde")
+  Sys.setenv(SHINYPROXY_USERNAME = "sejjng1")
+}
 
 credentials_info_ID <- Sys.getenv("SHINYPROXY_USERNAME", unset = "")
 credentials_auth <- Sys.getenv("CREDENTIALS_AUTH", unset = "")

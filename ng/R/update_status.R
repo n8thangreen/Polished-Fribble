@@ -148,6 +148,9 @@ make_room_status_entry <- function(use, info, avail) {
       unlist() %>%
       unname()
     
+    print(length(capacity))
+    print(info$am)
+    
     A <-
       tibble(date = info$date,
              weekday = date_to_weekday(date),
