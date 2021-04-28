@@ -24,7 +24,10 @@ searchAvailRoomServer <- function(id, credentials) {
         indiv_table <- loadData(database, 'individual_information')
         
         fluidRow(box(width = 3,
-                     h4("Search for space in the department (Refresh if no table shown): "),
+                     h4("Search for space in the department.
+                        You cannot book your own room.
+                        Use the 'Are you in or out?' tab instead.
+                        (Refresh if no table shown): "),
                      wellPanel(
                        dateInput(ns("date_search"),
                                  label = 'Date',
@@ -142,6 +145,12 @@ searchAvailRoomServer <- function(id, credentials) {
                                  type = "warning",
                                  closeButton = TRUE,
                                  duration = notif_duration)}
+              
+            } else if (any(is.na(candidate$Room_no)) || any(is.na(candidate$Date))) {
+              showNotification("No room is available for this time slot.",
+                               type = "warning",
+                               closeButton = TRUE,
+                               duration = notif_duration)
             } else {
               room_no_to_book <- candidate$Room_no
               dates_to_book <- candidate$Date
@@ -149,7 +158,7 @@ searchAvailRoomServer <- function(id, credentials) {
               
               candidate <- select(candidate, -Room_no, -Date, -Weekday)
               
-              # change from Out to In
+              # change to booked
               update_status(use = "booking",
                             room_no = room_no_to_book,
                             date = dates_to_book, 
@@ -157,17 +166,25 @@ searchAvailRoomServer <- function(id, credentials) {
                             database = database,
                             table = 'new_room_status')
               
+              booking_no <-
+                new_booking_no(booking_no = NA,
+                               db = database,
+                               table = "room_booked",
+                               date = dates_to_book)
+              
               update_booking(room_no = room_no_to_book,
                              booker = user_data[['ID']],
                              date = dates_to_book,
                              time_idx = input$all_table_cells_selected,
-                             booking_no = NA,
+                             # booking_no = NA,
+                             booking_no = booking_no,
                              database = database,
                              table = "room_booked")
               
               showNotification(room_confirm_msg(room_no_to_book,
                                                 dates_to_book,
-                                                times_to_book),
+                                                times_to_book,
+                                                booking_no),
                                type = "message",
                                closeButton = TRUE,
                                duration = notif_duration)

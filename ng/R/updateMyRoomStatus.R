@@ -98,7 +98,7 @@ updateMyRoomStatusServer <- function(id, credentials) {
           
           my_room_no <-
             indiv_table$RoomNumber[indiv_table$UserName == user_data[['ID']]]
-          
+
           rows_existing <-
             (room_table$Room_no == my_room_no) &
             (room_table$Date == date_update)

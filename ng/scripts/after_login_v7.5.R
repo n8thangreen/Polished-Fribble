@@ -155,8 +155,8 @@ Sys.setenv(CREDENTIALS_AUTH = TRUE)
 ## set user
 
 if (RUN_LOCAL) {
-  # Sys.setenv(SHINYPROXY_USERNAME = "ucakpde")
-  Sys.setenv(SHINYPROXY_USERNAME = "sejjng1")
+  Sys.setenv(SHINYPROXY_USERNAME = "ucakmle")
+  # Sys.setenv(SHINYPROXY_USERNAME = "sejjng1")
 }
 
 credentials_info_ID <- Sys.getenv("SHINYPROXY_USERNAME", unset = "")

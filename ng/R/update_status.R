@@ -34,7 +34,7 @@ update_status <- function(room_no,
                           table = 'new_room_status') {
   
   # contain in speech marks and paste together
-  ## dbQuoteLiteral() use instead?
+  ##TODO: dbQuoteLiteral() use instead?
   parse_query <- function(dat) {
     
     dat %>% 
@@ -89,7 +89,7 @@ update_status <- function(room_no,
   print(paste("query:", query))
   
   sapply(query, FUN = function(x) dbGetQuery(conn = db, x))
-  # sapply(query, FUN = function(x) dbExecute(conn = db, x))
+  # sapply(query, FUN = function(x) dbExecute(conn = db, x)) ##TODO: is this better?
 }
 
 

@@ -144,14 +144,26 @@ delete_booking <- function(booking_no,
 }
 
 
-# create unique booking ref
-#
+#' create unique booking ref
+#'
+#' @param db either name of a database or a DBIconnction
+#'
 new_booking_no <- function(booking_no,
                            db,
                            table,
                            date) {
   
   if (!is.na(booking_no)) return(booking_no)
+  
+  if (!inherits(db, "MySQLConnection")) {
+    db <- dbConnect(drv,
+                    dbname = db,
+                    host = options()$edwinyu$host, 
+                    port = options()$edwinyu$port,
+                    user = options()$edwinyu$user, 
+                    password = options()$edwinyu$password)
+    on.exit(dbDisconnect(db), add = TRUE)
+  }
   
   if (class(drv) == "MySQLDriver") {
     
