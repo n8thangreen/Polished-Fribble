@@ -25,7 +25,7 @@ searchAvailRoomServer <- function(id, credentials) {
         
         fluidRow(box(width = 3,
                      h4("Search for space in the department.
-                        You cannot book your own room.
+                        You cannot book your own room so it does not show in the list.
                         Use the 'Are you in or out?' tab instead.
                         (Refresh if no table shown): "),
                      wellPanel(
@@ -65,9 +65,10 @@ searchAvailRoomServer <- function(id, credentials) {
                          title = '"How to select the time slot?',
                          content = c(
                            "- Please click on the cells within the data table on the right.",
+                           "- Do not select the non-time cells e.g. the whole line.",
                            "- Corresponding room information will appear in the box below.",
-                           "- You may then confirm your selection, but notice that 'Booked' or
-                       'In' rooms cannot be reserved")
+                           "- You may then confirm your selection, but notice that 0 available
+                           desk rooms cannot be reserved")
                        ),
                      tags$head(
                        tags$style(
@@ -85,7 +86,8 @@ searchAvailRoomServer <- function(id, credentials) {
           
           user_data <- credentials$info
           
-          if (length(input$search) > 0 && input$search == counter_search + 1) {
+          if (length(input$search) > 0 &&
+              input$search == counter_search + 1) {
             
             counter_search <<- input$search
             
@@ -107,8 +109,10 @@ searchAvailRoomServer <- function(id, credentials) {
                 req(input$all_table_cells_selected)
                 
                 if (nrow(input$all_table_cells_selected) == 0) {
-                  cat('Please select the rooms')
-                } else { 
+                  cat('Please select a time')
+                } else if (any(input$all_table_cells_selected[, 2] %in% c(0,1,2,3))) {
+                  cat('Please select time cells only')
+                } else {
                   row_id <- input$all_table_cells_selected[, 1]
                   col_id <- input$all_table_cells_selected[, 2]
                   

@@ -4,12 +4,14 @@
 # and change status
 #
 create_candidate_table <- function(input,
-                                   user_ID) {
+                                   user_ID,
+                                   blocked_cols = c(0,1,2,3)) {
   
   # no times selected
   if (is.null(input$all_table_cells_selected)) return(NULL)
   if (dim(input$all_table_cells_selected)[2] != 2) return(NULL)
   if (any(is.na(input$all_table_cells_selected))) return(NULL)
+  if (any(input$all_table_cells_selected[, 2] %in% blocked_cols)) return(NULL)
   
   room_table <- loadData(database, 'new_room_status')
   indiv_table <- loadData(database, 'individual_information')
