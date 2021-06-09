@@ -45,14 +45,17 @@ updateMyRoomStatusServer <- function(id, credentials) {
                            so long as it isn't booked by someone else",
                            "- If you input nothing in this table,
                            your room will not appear in any search result
-                           (available by default)"))),
+                           (desk not available by default)"))),
               
               checkboxGroupInput(ns("time"),
                                  "Time",
                                  choices = c("am","pm"),
                                  selected = ""),
               actionButton(ns("save_room"),
-                           "Save/Refresh",
+                           "Save",
+                           width = "25%"),
+              actionButton(ns("refresh"),
+                           "Refresh",
                            width = "25%")),
           box(width = 9,
               DT::dataTableOutput(outputId = ns('personal_table'))) %>%
@@ -79,72 +82,75 @@ updateMyRoomStatusServer <- function(id, credentials) {
       })
       
       return(
-        observeEvent(input$save_room, {   
+        observeEvent(input$save_room | input$refresh, {
           
-          user_data <- credentials$info
-          date_update <- input$date_update
-          avail_time <- paste(input$time, collapse = "")
-          
-          ampm <- 
-            switch(avail_time,
-                   am = "am",
-                   pm = "pm",
-                   ampm = "both",
-                   "neither")
-          
-          room_table <- loadData(database, 'new_room_status')
-          indiv_table <- loadData(database, 'individual_information')
-          booked_table <- loadData(database, "room_booked")
-          
-          my_room_no <-
-            indiv_table$RoomNumber[indiv_table$UserName == user_data[['ID']]]
-
-          rows_existing <-
-            (room_table$Room_no == my_room_no) &
-            (room_table$Date == date_update)
-          
-          is_existing_record <- any(rows_existing)
-          
-          rooms_existing <- room_table[rows_existing, , drop = FALSE]
-          
-          if (nrow(rooms_existing) == 0) {
-            is_room_booked <- FALSE
-          } else {
-            # is_room_booked <- rooms_existing == "Booked"
-            is_room_booked <-
-              (rooms_existing == 0 && my_room_no %in% booked_table$room_no)
-          }
-          
-          is_already_booked <- any(as.matrix(is_room_booked))
-          
-          if (is_existing_record && is_already_booked) {
+          if (length(input$save_room > 0)) {
             
-            showNotification("Your room has reached capacity.
+            user_data <- credentials$info
+            date_update <- input$date_update
+            avail_time <- paste(input$time, collapse = "")
+            
+            ampm <- 
+              switch(avail_time,
+                     am = "am",
+                     pm = "pm",
+                     ampm = "both",
+                     "neither")
+            
+            room_table <- loadData(database, 'new_room_status')
+            indiv_table <- loadData(database, 'individual_information')
+            booked_table <- loadData(database, "room_booked")
+            
+            my_room_no <-
+              indiv_table$RoomNumber[indiv_table$UserName == user_data[['ID']]]
+            
+            rows_existing <-
+              (room_table$Room_no == my_room_no) &
+              (room_table$Date == date_update)
+            
+            is_existing_record <- any(rows_existing)
+            
+            rooms_existing <- room_table[rows_existing, , drop = FALSE]
+            
+            if (nrow(rooms_existing) == 0) {
+              is_room_booked <- FALSE
+            } else {
+              # is_room_booked <- rooms_existing == "Booked"
+              is_room_booked <-
+                (rooms_existing == 0 && my_room_no %in% booked_table$room_no)
+            }
+            
+            is_already_booked <- any(as.matrix(is_room_booked))
+            
+            if (is_existing_record && is_already_booked) {
+              
+              showNotification("Your room has reached capacity.
                                Please contact admin.",
-                             type = "error",
-                             duration = 30,
-                             closeButton = TRUE)
-          } else {
-            update_status(use = "write",
-                          room_no = my_room_no,
-                          date = date_update,
-                          am = ampm,
-                          database = database,
-                          table = 'new_room_status')
+                               type = "error",
+                               duration = 30,
+                               closeButton = TRUE)
+            } else {
+              update_status(use = "write",
+                            room_no = my_room_no,
+                            date = date_update,
+                            am = ampm,
+                            database = database,
+                            table = 'new_room_status')
+            }
+            
+            personal_table <-
+              room_table[room_table$Room_no == my_room_no &
+                           !is_past(room_table$Date), ] %>% 
+              arrange(desc(Date))
+            
+            output$personal_table <-
+              DT::renderDataTable({
+                personal_table},
+                options = list(scrollX = TRUE,
+                               # pageLength = 10
+                               paging = FALSE)
+              )
           }
-          
-          personal_table <-
-            room_table[room_table$Room_no == my_room_no &
-                         !is_past(room_table$Date), ] %>% 
-            arrange(desc(Date))
-          
-          output$personal_table <-
-            DT::renderDataTable({
-              personal_table},
-              options = list(scrollX = TRUE,
-                             # pageLength = 10
-                             paging = FALSE)
-            )
         })
       )
     }

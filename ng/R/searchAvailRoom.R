@@ -11,6 +11,7 @@ searchAvailRoomUI <- function(id) {
 searchAvailRoomServer <- function(id, credentials) {
   
   counter_search <<- 0
+  counter_refresh <<- 0
   counter_book <<- 0
   
   moduleServer(
@@ -49,7 +50,10 @@ searchAvailRoomServer <- function(id, credentials) {
                                         choices = c("am","pm"),
                                         selected = ""),
                      actionButton(ns("search"),
-                                  "Search/Refresh",
+                                  "Search",
+                                  width = "50%"),
+                     actionButton(ns("refresh"),
+                                  "Refresh",
                                   width = "50%"),
                      h4("Confirm rooms of your choice:"),
                      
@@ -82,14 +86,16 @@ searchAvailRoomServer <- function(id, credentials) {
       })
       
       return(
-        observeEvent(input$search | input$book, {
+        observeEvent(input$search | input$book | input$refresh, {
           
           user_data <- credentials$info
           
           if (length(input$search) > 0 &&
-              input$search == counter_search + 1) {
+              (input$search == counter_search + 1 ||
+               input$refresh == counter_refresh + 1)) {
             
             counter_search <<- input$search
+            counter_refresh <<- input$refresh
             
             req(input$date_search)
             
