@@ -1,3 +1,5 @@
+# notification messages ---------------------------------------------------
+
 
 #
 room_confirm_msg <- function(room_no_to_book,
@@ -26,3 +28,13 @@ room_confirm_msg <- function(room_no_to_book,
 #     {paste(time_slots[[i]], collapse = ' and ')})\n
 #     Booking number {booking_no}")
 
+
+
+#
+my_room_message <- function(date_update, ampm) {
+  
+  my_room <- paste(date_update, ".\n",
+                   "In the department", ampm)
+  
+  paste("You have updated your attendance:", my_room)
+}

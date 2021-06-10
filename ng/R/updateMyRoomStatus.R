@@ -17,6 +17,8 @@ updateMyRoomStatusUI <- function(id) {
 #
 updateMyRoomStatusServer <- function(id, credentials) {
   
+  counter_save <<- 0
+  
   moduleServer(
     id,
     function(input, output, session) {
@@ -27,7 +29,8 @@ updateMyRoomStatusServer <- function(id, credentials) {
         
         fluidPage(
           box(width = 3,
-              h4("Record when you are in the department. (Refresh if no table shown.)"),
+              h4("Record when you are in the department.
+                 Table shows available desks in your room. (Refresh if no table shown.)"),
               wellPanel(
                 dateInput(ns('date_update'),
                           label = 'Date',
@@ -83,6 +86,8 @@ updateMyRoomStatusServer <- function(id, credentials) {
       
       return(
         observeEvent(input$save_room | input$refresh, {
+          
+          notif_duration <- 10
           
           if (length(input$save_room > 0)) {
             
@@ -148,8 +153,16 @@ updateMyRoomStatusServer <- function(id, credentials) {
                 personal_table},
                 options = list(scrollX = TRUE,
                                # pageLength = 10
-                               paging = FALSE)
-              )
+                               paging = FALSE))
+            
+            if (input$save_room == counter_save + 1) {
+              showNotification(my_room_message(date_update, ampm),
+                               type = "message",
+                               closeButton = TRUE,
+                               duration = notif_duration)
+            }
+            
+            counter_save <<- input$save_room
           }
         })
       )

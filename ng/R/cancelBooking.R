@@ -21,7 +21,8 @@ cancelBookingServer <- function(id, credentials) {
         
         fluidPage(
           box(width = 3,
-              h4("Amend when you are in the department (Refresh if no table shown.)"),
+              h4("Amend your booked rooms. Not including your own room.
+                 (Refresh if no table shown.)"),
               textInput(ns("booking_no"),
                         "Input booking number here:",
                         value = "") %>%
@@ -84,9 +85,9 @@ cancelBookingServer <- function(id, credentials) {
                              database = database,
                              table = "room_booked")
               
-              print(paste("room_no:", delete_info$room_no))
-              print(paste("date:", delete_info$date))
-              print(paste("avail:", avail))
+              # print(paste("room_no:", delete_info$room_no))
+              # print(paste("date:", delete_info$date))
+              # print(paste("avail:", avail))
               
               update_status(use = "booking",
                             room_no = delete_info$room_no[1],
@@ -98,12 +99,12 @@ cancelBookingServer <- function(id, credentials) {
               current <- weekdays(as.POSIXct(Sys.Date()), abbreviate = FALSE)
               
               cancel_confirm_msg <-
-                sprintf("You have successfully canceled the booked room %s \n (%s,%s,",
+                sprintf("You have successfully cancelled the booked room %s \n (%s,%s,",
                         paste(input$time4, collapse = ' and '), ")",
                         input$room_book_no2, current, input$day4)
               
               ##TODO: finish/test this...            
-              # sprintf("You have successfully canceled the booked room %s \n (%s,%s,%s)",
+              # sprintf("You have successfully cancelled the booked room %s \n (%s,%s,%s)",
               #         paste(delete_info$times, collapse = ' and '),
               #         delete_info$room_no, delete_info$day, delete_info$date)
               
@@ -113,14 +114,15 @@ cancelBookingServer <- function(id, credentials) {
                                closeButton = TRUE)
             } else {
               showNotification(
-                paste("Your booking reference number does not exist, recheck it please"),
+                paste("Your booking reference number does not exist, recheck it please."),
                 type = "message",
                 duration = 10,
                 closeButton = TRUE)
             }}
             
             my_booked_table <-
-              booked_table[booked_table$booker == user_data[['ID']], ]
+              booked_table[booked_table$booker == user_data[['ID']], ] %>% 
+              arrange(desc(date))
             
             output$cancel_table <-
               DT::renderDataTable(my_booked_table)
