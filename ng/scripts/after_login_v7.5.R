@@ -42,7 +42,7 @@ source("../R/cancelBooking.R")
 source("../R/help_tab.R")
 
 # from RStudio
-RUN_LOCAL <- TRUE
+RUN_LOCAL <- FALSE
 
 # database source
 DB_REMOTE <- TRUE
